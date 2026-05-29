@@ -1,0 +1,242 @@
+# Agon-Eval-Harness
+
+> **Test Limits. Collide Ideas. Earn Excellence.**
+
+<p align="center">
+  <img src="./docs/images/agon-header.png" alt="Agon-Eval-Harness — Greek arenas of athletic, rhetorical, legal, and artistic contest, with a six-stage progression from Challenge to Transformation." width="100%">
+</p>
+
+<p align="center">
+  <em>An evaluation harness for modern AI systems — built on the principle that excellence emerges <strong>because of</strong> opposition, not despite it.</em>
+</p>
+
+---
+
+> **Status: Early scaffolding (Week 0).** This repository is under active construction. The philosophy below is stable; the code is not. What's built is marked built. What's planned is marked planned. Nothing here pretends to be finished — that honesty is the point.
+
+---
+
+## Why "Agon"?
+
+The ancient Greeks used **agon** (ἀγών) to name a contest undertaken in pursuit of excellence. Athletes entered the arena. Philosophers debated. Playwrights competed for honor. Citizens argued cases in court. Each struggled against a worthy opposition — and was made better by it.
+
+Agon was never conflict for its own sake. It was **purposeful opposition in service of improvement**.
+
+Modern AI systems need the same thing. A model, prompt, agent, or workflow shouldn't be trusted because it succeeded once in a demo. It should be trusted because it has *repeatedly survived rigorous challenge*. This harness exists to build that arena.
+
+---
+
+## The Problem This Solves
+
+The industry is excellent at demonstrations and weak at evaluation. A demo answers *"Can it work?"* An evaluation answers the harder questions:
+
+- Does it reliably work?
+- Under what conditions does it fail?
+- How often, and how badly?
+- Is it improving or regressing over time?
+
+`Agon-Eval-Harness` brings a **Test & Evaluation discipline** to AI systems: documented failure modes, honest pass/fail reporting, regression tracking, and reproducible results over headline claims.
+
+---
+
+## What Gets Evaluated
+
+The harness is being built to assess, in rough order of increasing difficulty:
+
+| Target | Examples |
+| --- | --- |
+| **Models** | Foundation models, fine-tunes, hosted APIs, local models |
+| **Prompts** | System prompts, prompt variants, context-engineering strategies |
+| **Retrieval** | RAG pipelines, chunking/embedding choices, hybrid search, reranking |
+| **Agents** | Tool-using agents, ReAct loops, multi-turn behavior, planning, memory/state |
+| **End-to-end systems** | Full agentic workflows, production deployments |
+
+---
+
+## Evaluation Categories
+
+What the harness measures, and the question each category answers:
+
+- **Functional Correctness** — Did it produce the right result?
+- **Tool Use** — Did it select and call the right tools, correctly?
+- **Planning** — Did it form and execute a reasonable plan?
+- **State Management** — Did it hold accurate context and memory across turns?
+- **Robustness** — How does it hold up under stress, ambiguity, and adversarial input?
+- **Reliability** — Can it repeat a success consistently, not just once?
+- **Safety** — Does it avoid unacceptable behaviors and failure modes?
+
+---
+
+## Core Philosophy
+
+**Excellence emerges through opposition.** A system is proven by surviving challenge, not by succeeding under ideal conditions. Every benchmark, adversarial case, regression test, and production failure is a modern agon.
+
+**Failure is data.** Failure isn't the enemy — *undiscovered* failure is. Every failure should become a lesson, a test case, a regression check, and a future improvement.
+
+**Production is reality.** Offline evaluations matter; production behavior matters more. Production traces continuously generate new evaluation cases, so the harness grows stronger over time:
+
+```text
+Design → Evaluate → Deploy → Observe → Learn → Improve ─┐
+   ▲                                                     │
+   └─────────────────────────────────────────────────────┘
+```
+
+**Trust requires evidence.** Every claim is backed by metrics, traces, evaluations, and reproducible results — never by assertion.
+
+---
+
+## Architecture (Planned)
+
+```text
+                        AGON
+                          │
+                          ▼
+        ┌──────────────────────────────────┐
+        │            Eval Suite             │
+        │  Benchmarks · Adversarial Cases   │
+        │  Regression Tests · Prod Failures │
+        └────────────────┬──────────────────┘
+                         ▼
+        ┌──────────────────────────────────┐
+        │           Agent Harness           │
+        │  Model · Prompt · Tools           │
+        │  Memory · State · Planning        │
+        └────────────────┬──────────────────┘
+                         ▼
+        ┌──────────────────────────────────┐
+        │         Evaluation Layer          │
+        │  Metrics · Scorers · Judges       │
+        │  Human Review                     │
+        └────────────────┬──────────────────┘
+                         ▼
+        ┌──────────────────────────────────┐
+        │             Results               │
+        │  Scores · Traces · Reports        │
+        │  Regression Tracking              │
+        └────────────────┬──────────────────┘
+                         ▼
+        ┌──────────────────────────────────┐
+        │      Continuous Improvement       │
+        │  Failure Discovery · New Tests    │
+        │  Eval Suite Growth                │
+        └──────────────────────────────────┘
+```
+
+---
+
+## Repository Structure (Target)
+
+```text
+Agon-Eval-Harness/
+├── README.md
+├── docs/
+│   ├── images/            # Header and diagrams (drop agon-header.png here)
+│   ├── philosophy/
+│   ├── architecture/
+│   ├── patterns/
+│   ├── examples/
+│   └── decisions/         # Architecture Decision Records (ADRs)
+├── evals/
+│   ├── benchmark/
+│   ├── adversarial/       # Red-team suite (OWASP Top 10 for Agentic Apps)
+│   ├── regression/
+│   └── production/        # Cases harvested from production traces
+├── harness/
+│   ├── agents/
+│   ├── workflows/
+│   ├── tools/
+│   └── memory/
+├── judges/
+│   ├── rule_based/
+│   ├── llm_judge/
+│   └── hybrid/
+├── traces/                # OpenTelemetry GenAI trace schemas + examples
+│   ├── schemas/
+│   └── examples/
+├── reports/
+└── experiments/
+```
+
+---
+
+## Tech Stack
+
+The harness targets the canonical production eval stack — the same tooling used at frontier labs and the scale-ups already hiring for this discipline:
+
+| Layer | Tooling |
+| --- | --- |
+| **Eval framework** | [Inspect AI](https://inspect.ai-safety-institute.org.uk/) (UK AISI) |
+| **Agent orchestration** | LangGraph / LangChain |
+| **Observability** | OpenTelemetry GenAI Semantic Conventions → LangSmith / Grafana + Tempo |
+| **Retrieval** | pgvector / LanceDB, hybrid search, reranking |
+| **Production runtime** | FastAPI · Pydantic · asyncio |
+| **Quality + tooling** | pytest · uv · ruff |
+| **Packaging + CI** | Docker · GitHub Actions |
+| **Cloud** | AWS (S3, IAM, ECR, App Runner, Secrets Manager, Bedrock) |
+
+---
+
+## Roadmap
+
+The build is sequenced in three phases. Each ends with a public, independently reproducible milestone — a reviewer should be able to clone and run the harness in under 20 minutes.
+
+### Phase 1 — Foundation
+- [ ] Evaluation case format and local execution loop
+- [ ] First Inspect AI eval suite (hand-labeled golden cases: pass / fail / adversarial)
+- [ ] Rule-based + LLM-as-judge graders, with the judge validated against held-out labels
+- [ ] CI gate that breaks the build on regression
+- [ ] Documented error taxonomy mapping failure modes to the evals that catch them
+
+### Phase 2 — Observability & Real Agentic Systems
+- [ ] OpenTelemetry GenAI instrumentation across every LLM call, tool call, and grader decision
+- [ ] RAG pipeline with **retrieval evals isolated from generation evals** (recall@k, MRR)
+- [ ] LangGraph agent (ReAct + tool calling), evaluated for multi-turn behavior and goal completion
+- [ ] LangSmith integration: dataset versioning, run comparison, evaluator dashboards
+
+### Phase 3 — Red Team, Domain & Thesis
+- [ ] Adversarial suite mapped to OWASP Top 10 for Agentic Applications (prompt injection, goal hijacking, memory poisoning, tool misuse)
+- [ ] Regulated-domain eval harness (consequential-decision analog; synthetic data only)
+- [ ] Published methodology essay on what we measure when we measure an agentic system
+- [ ] Open-source contribution to `inspect_evals` or equivalent
+
+---
+
+## What We Favor / What We Reject
+
+| ✅ We favor | ❌ We reject |
+| --- | --- |
+| Evidence over claims | Benchmark theater |
+| Reproducibility over anecdotes | Leaderboard chasing |
+| Traceability over mystery | Opaque scoring |
+| Understanding over score-chasing | Single-number obsession |
+| Learning over rankings | Demo-driven confidence |
+
+---
+
+## Who This Is For
+
+AI engineers, evaluation engineers, test engineers, prompt engineers, agent developers, researchers, and system architects — anyone who believes a system should prove itself before it's trusted.
+
+---
+
+## Getting Started
+
+> Installation and quick-start instructions will land with the Phase 1 milestone. For now, this repository is design and scaffolding. Watch the roadmap.
+
+---
+
+## Contributing
+
+Contributions, adversarial test cases, and documented failure modes are all welcome — a good failure report is as valuable here as a working feature. A `CONTRIBUTING.md` will accompany the Phase 1 release.
+
+---
+
+## License
+
+License TBD — to be selected before the Phase 1 public release.
+
+---
+
+> *"Excellence is not the absence of opposition, but victory through it."*
+>
+> **Through agon, we become more than we were.**
