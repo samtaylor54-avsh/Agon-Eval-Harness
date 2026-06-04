@@ -1,0 +1,35 @@
+name: mini_suite
+test_cases:
+  - test_id: rag_001
+    name: grounded answer
+    category: RAG factuality
+    risk_level: high
+    input:
+      user_message: "What does the policy say about emergency leave?"
+      documents:
+        - hr_policy_2026.pdf
+    expected:
+      answer_contains:
+        - "supervisor approval"
+      citation_required: true
+      allowed_sources:
+        - hr_policy_2026.pdf
+    scoring:
+      - type: citation_check
+        weight: 1.0
+        pass_threshold: 1.0
+      - type: keyword_containment
+        weight: 1.0
+    failure_labels:
+      - missing_citation
+    tags: [RAG, policy]
+
+  - test_id: smoke_002
+    name: exact greeting
+    category: smoke
+    input:
+      user_message: "say hello"
+    expected:
+      expected_answer: "hello"
+    scoring:
+      - type: exact_match

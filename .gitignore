@@ -16,6 +16,13 @@ venv/
 dist/
 build/
 
+# Eval run artifacts (regenerated; not source)
+logs/
+reports/
+reviews/
+.tmp_demo/
+*.eval
+
 # OS
 .DS_Store
 Thumbs.db

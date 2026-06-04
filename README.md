@@ -12,7 +12,7 @@
 
 ---
 
-> **Status: Early scaffolding (Week 0).** This repository is under active construction. The philosophy below is stable; the code is not. What's built is marked built. What's planned is marked planned. Nothing here pretends to be finished — that honesty is the point.
+> **Status: Phase 1 MVP built.** The core harness runs today on [Inspect AI](https://inspect.aisi.org.uk/): a typed YAML case format, 11 scorers (deterministic + LLM-as-judge), composite/flake scoring, failure taxonomy, regression detection, judge calibration, and Markdown/JSON/JUnit reporting behind an `agon` CLI — all runnable **fully offline** (see Quickstart). Phases 2–3 (LangGraph agents, OpenTelemetry, retrieval recall@k/MRR, OWASP adversarial suite) remain planned. See [`docs/decisions/ADR-0001`](docs/decisions/ADR-0001-inspect-vs-custom.md) for the build decision.
 
 ---
 
@@ -181,11 +181,11 @@ The harness targets the canonical production eval stack — the same tooling use
 The build is sequenced in three phases. Each ends with a public, independently reproducible milestone — a reviewer should be able to clone and run the harness in under 20 minutes.
 
 ### Phase 1 — Foundation
-- [ ] Evaluation case format and local execution loop
-- [ ] First Inspect AI eval suite (hand-labeled golden cases: pass / fail / adversarial)
-- [ ] Rule-based + LLM-as-judge graders, with the judge validated against held-out labels
-- [ ] CI gate that breaks the build on regression
-- [ ] Documented error taxonomy mapping failure modes to the evals that catch them
+- [x] Evaluation case format (typed YAML) and local execution loop (Inspect `eval`)
+- [x] First Inspect AI eval suite (20-case offline smoke suite)
+- [x] Rule-based + LLM-as-judge graders, with the judge validated against held-out labels (`agon calibrate`)
+- [x] CI gate that breaks the build on regression (`agon run`/`compare` exit codes + GitHub Actions)
+- [x] Documented error taxonomy mapping failure modes to the evals that catch them (`detected_failure_labels`)
 
 ### Phase 2 — Observability & Real Agentic Systems
 - [ ] OpenTelemetry GenAI instrumentation across every LLM call, tool call, and grader decision
@@ -221,7 +221,52 @@ AI engineers, evaluation engineers, test engineers, prompt engineers, agent deve
 
 ## Getting Started
 
-> Installation and quick-start instructions will land with the Phase 1 milestone. For now, this repository is design and scaffolding. Watch the roadmap.
+**Requirements:** Python 3.11–3.12 and [uv](https://docs.astral.sh/uv/). No API key needed for the offline path.
+
+```bash
+uv sync                       # create the env and install deps (Python pinned to 3.12)
+uv run pytest                 # self-test the harness
+```
+
+### Quickstart (fully offline — no API key, no model downloads)
+
+```bash
+# 1. Run the 20-case smoke suite against the offline mock SUT, with a deterministic CI gate.
+uv run agon run examples/datasets/rag_smoke.yaml --display none
+#    → writes reports/<run_id>.report.{md,json,junit.xml}; exit 0 (PASS) / 1 (FAIL) / 2 (abort)
+
+# 2. See a realistic mixed report (PASS/FAIL/INVESTIGATE) against an in-process stub SUT.
+uv run python examples/quickstart.py
+
+# 3. Inspect per-sample traces in Inspect's viewer.
+uv run inspect view --log-dir logs
+
+# 4. Compare two runs for regressions (CI gate breaks on regression).
+uv run agon compare <current_run_id> <baseline_run_id>
+
+# 5. Validate an LLM judge against human labels before trusting it (needs a real judge model).
+uv run agon calibrate examples/calibration/labeled.yaml --judge-model openai/gpt-4o --min-kappa 0.6
+```
+
+To evaluate a **real** system, point the SUT and judge at a provider via a run config
+(`examples/run.toml`): set `[sut] adapter = "litellm"`, `model = "openai/gpt-4o"`, and a real
+`[judge] model`. The `http` adapter posts cases to an external RAG/agent service.
+
+### What's built (the `agon/` package)
+
+| Module | Responsibility |
+|---|---|
+| `schemas/` | Typed case / config / result models (Pydantic v2) |
+| `dataset/` | YAML→`Sample` loader, content-addressed `dataset_version` |
+| `sut/` | SUT adapters: `mockllm` (offline), `callable`, `http` |
+| `scoring/` | 11 scorers (exact/keyword/citation/rubric/safety/RAG…) + composite + flake reducers |
+| `analysis/` | Eval-log digests + regression comparator |
+| `reporting/` | Markdown / JSON / JUnit-XML + PASS/FAIL/INVESTIGATE recommendation |
+| `calibrate/` | Judge-vs-human agreement (Cohen's κ) |
+| `cli/` | `agon run · compare · report · review · calibrate` |
+
+> Note: the **Repository Structure (Target)** above is the long-term Phase 2/3 layout. The
+> shipped MVP lives under `agon/` with `examples/` and `tests/`.
 
 ---
 

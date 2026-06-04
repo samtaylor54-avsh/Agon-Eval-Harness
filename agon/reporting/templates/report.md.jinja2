@@ -1,0 +1,38 @@
+# Agon Eval Report — {{ d.task }}
+
+| Field | Value |
+|---|---|
+| Run ID | `{{ d.run_id }}` |
+| System version | {{ d.system_version }} |
+| Model | {{ d.model or "—" }} |
+| Dataset version | `{{ d.dataset_version[:12] or "—" }}` |
+| Created | {{ d.created or "—" }} |
+| **Overall pass rate** | **{{ "%.1f"|format(d.overall_pass_rate * 100) }}%** ({{ passed }}/{{ total }}) |
+| Errors | {{ d.error_count }} |
+| **Recommendation** | **{{ recommendation }}** |
+
+## Pass rate by category
+{% for cat, rate in d.pass_rate_by_category.items() %}- {{ cat }}: {{ "%.1f"|format(rate * 100) }}%
+{% endfor %}
+## Pass rate by risk
+{% for risk, rate in d.pass_rate_by_risk.items() %}- {{ risk }}: {{ "%.1f"|format(rate * 100) }}%
+{% endfor %}
+{% if d.top_failure_labels %}## Top failure modes
+{% for label, count in d.top_failure_labels %}- {{ label }}: {{ count }}
+{% endfor %}{% endif %}
+{% if regression %}## Regression vs `{{ regression.baseline_run_id }}`
+- Regression detected: **{{ "YES" if regression.regression_detected else "no" }}**
+- New failures: {{ regression.new_failures | join(", ") or "none" }}
+- Fixed failures: {{ regression.fixed_failures | join(", ") or "none" }}
+{% for tid, old, new in regression.score_drops %}- Score drop {{ tid }}: {{ "%.2f"|format(old) }} → {{ "%.2f"|format(new) }}
+{% endfor %}{% endif %}
+{% if failed %}## Failed cases
+| Test | Category | Risk | Composite | Failure labels |
+|---|---|---|---|---|
+{% for r in failed %}| {{ r.test_id }} | {{ r.category }} | {{ r.risk_level }} | {{ "%.2f"|format(r.composite_score) }} | {{ r.detected_failure_labels | join(", ") }} |
+{% endfor %}{% endif %}
+{% if retrieval_rows %}## Retrieval metrics (isolated from generation)
+| Test | {{ retrieval_cols | join(" | ") }} |
+|---|{% for _ in retrieval_cols %}---|{% endfor %}
+{% for tid, vals in retrieval_rows %}| {{ tid }} | {{ vals | join(" | ") }} |
+{% endfor %}{% endif %}

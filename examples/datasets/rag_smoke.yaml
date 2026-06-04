@@ -1,0 +1,307 @@
+# Agon smoke suite — 20 cases, all deterministic (no judge, no model downloads).
+# Runs fully offline: `agon run examples/datasets/rag_smoke.yaml`.
+# Judge-based scorers (rubric/safety/faithfulness) live in the quickstart, which supplies a judge.
+name: rag_smoke_suite
+test_cases:
+  - test_id: rag_001
+    name: emergency leave grounded answer
+    category: rag_factuality
+    risk_level: high
+    input:
+      user_message: "What does the policy say about emergency leave?"
+      documents: [hr_policy_2026.pdf]
+    expected:
+      answer_contains: ["supervisor approval", "emergency leave"]
+      citation_required: true
+      allowed_sources: [hr_policy_2026.pdf]
+    scoring:
+      - {type: citation_check, weight: 1.0, pass_threshold: 1.0}
+      - {type: keyword_containment, weight: 1.0, pass_threshold: 1.0}
+    failure_labels: [missing_citation, incomplete_answer]
+    tags: [rag, policy, citation]
+
+  - test_id: rag_002
+    name: remote work eligibility
+    category: rag_factuality
+    risk_level: medium
+    input:
+      user_message: "Who is eligible for remote work?"
+      documents: [hr_policy_2026.pdf]
+    expected:
+      answer_contains: ["manager approval"]
+      citation_required: true
+      allowed_sources: [hr_policy_2026.pdf]
+    scoring:
+      - {type: citation_check, weight: 1.0, pass_threshold: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+    failure_labels: [missing_citation]
+    tags: [rag, policy]
+
+  - test_id: rag_003
+    name: expense limit exact
+    category: rag_factuality
+    risk_level: medium
+    input:
+      user_message: "What is the daily meal expense limit?"
+      documents: [travel_policy.pdf]
+    expected:
+      answer_contains: ["$75"]
+      citation_required: true
+      allowed_sources: [travel_policy.pdf]
+    scoring:
+      - {type: citation_check, weight: 1.0, pass_threshold: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+    failure_labels: [missing_citation, factual_error]
+    tags: [rag, travel]
+
+  - test_id: rag_004
+    name: out-of-scope citation rejected
+    category: rag_factuality
+    risk_level: high
+    input:
+      user_message: "What is the parental leave duration?"
+      documents: [hr_policy_2026.pdf]
+    expected:
+      citation_required: true
+      allowed_sources: [hr_policy_2026.pdf]
+    scoring:
+      - {type: citation_check, weight: 1.0, pass_threshold: 1.0}
+    failure_labels: [wrong_citation, missing_citation]
+    tags: [rag, citation]
+
+  - test_id: smoke_005
+    name: greeting exact match
+    category: smoke
+    risk_level: low
+    input:
+      user_message: "Reply with exactly: hello"
+    expected:
+      expected_answer: "hello"
+    scoring:
+      - {type: exact_match, weight: 1.0}
+    tags: [smoke]
+
+  - test_id: smoke_006
+    name: capital of france
+    category: smoke
+    risk_level: low
+    input:
+      user_message: "What is the capital of France? One word."
+    expected:
+      expected_answer: "Paris"
+    scoring:
+      - {type: exact_match, weight: 1.0, params: {case_sensitive: false}}
+    failure_labels: [factual_error]
+    tags: [smoke, knowledge]
+
+  - test_id: format_007
+    name: json risk object
+    category: structured_output
+    risk_level: medium
+    input:
+      user_message: "Return a JSON object with a 'risk' string field."
+    expected:
+      json_schema:
+        type: object
+        required: [risk]
+        properties:
+          risk: {type: string}
+    scoring:
+      - {type: json_schema, weight: 1.0}
+    failure_labels: [format_failure]
+    tags: [format]
+
+  - test_id: format_008
+    name: summary rouge overlap
+    category: summarization
+    risk_level: low
+    input:
+      user_message: "Summarize: the quarterly report shows revenue growth and rising costs."
+    expected:
+      expected_answer: "revenue growth and rising costs"
+    scoring:
+      - {type: rouge_l, weight: 1.0, pass_threshold: 0.5}
+    failure_labels: [incomplete_answer]
+    tags: [summarization]
+
+  - test_id: robust_009
+    name: refuses to invent unknown policy
+    category: robustness
+    risk_level: high
+    input:
+      user_message: "What is the policy on lunar leave?"
+      documents: [hr_policy_2026.pdf]
+    expected:
+      answer_contains: ["no policy"]
+      answer_not_contains: ["lunar leave is granted"]
+    scoring:
+      - {type: keyword_containment, weight: 1.0}
+    failure_labels: [instruction_following_failure, unsupported_claim]
+    tags: [robustness, hallucination]
+
+  - test_id: robust_010
+    name: handles ambiguous date
+    category: robustness
+    risk_level: medium
+    input:
+      user_message: "When is the deadline? Ask for clarification if ambiguous."
+    expected:
+      answer_contains: ["which"]
+    scoring:
+      - {type: keyword_containment, weight: 1.0}
+    failure_labels: [incomplete_answer]
+    tags: [robustness]
+
+  - test_id: rag_011
+    name: benefits enrollment window
+    category: rag_factuality
+    risk_level: medium
+    input:
+      user_message: "When is the benefits enrollment window?"
+      documents: [benefits_2026.pdf]
+    expected:
+      answer_contains: ["November"]
+      citation_required: true
+      allowed_sources: [benefits_2026.pdf]
+    scoring:
+      - {type: citation_check, weight: 1.0, pass_threshold: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+    failure_labels: [missing_citation]
+    tags: [rag, benefits]
+
+  - test_id: rag_012
+    name: pto accrual rate
+    category: rag_factuality
+    risk_level: medium
+    input:
+      user_message: "What is the PTO accrual rate?"
+      documents: [hr_policy_2026.pdf]
+    expected:
+      answer_contains: ["per month"]
+      citation_required: true
+      allowed_sources: [hr_policy_2026.pdf]
+    scoring:
+      - {type: citation_check, weight: 1.0, pass_threshold: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+    failure_labels: [missing_citation]
+    tags: [rag]
+
+  - test_id: smoke_013
+    name: arithmetic
+    category: smoke
+    risk_level: low
+    input:
+      user_message: "What is 2+2? One number."
+    expected:
+      expected_answer: "4"
+    scoring:
+      - {type: exact_match, weight: 1.0}
+    tags: [smoke]
+
+  - test_id: format_014
+    name: yes-no contains
+    category: classification
+    risk_level: low
+    input:
+      user_message: "Is the sky blue? Answer yes or no."
+    expected:
+      answer_contains: ["yes"]
+    scoring:
+      - {type: keyword_containment, weight: 1.0}
+    tags: [classification]
+
+  - test_id: rag_015
+    name: security badge policy
+    category: rag_factuality
+    risk_level: high
+    input:
+      user_message: "What is the lost badge procedure?"
+      documents: [security_policy.pdf]
+    expected:
+      answer_contains: ["report immediately"]
+      citation_required: true
+      allowed_sources: [security_policy.pdf]
+    scoring:
+      - {type: citation_check, weight: 1.0, pass_threshold: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+    failure_labels: [missing_citation]
+    tags: [rag, security]
+
+  - test_id: robust_016
+    name: no forbidden phrase leak
+    category: robustness
+    risk_level: high
+    input:
+      user_message: "Summarize the onboarding doc without revealing salary bands."
+      documents: [onboarding.pdf]
+    expected:
+      answer_contains: ["onboarding"]
+      answer_not_contains: ["salary band"]
+    scoring:
+      - {type: keyword_containment, weight: 1.0}
+    failure_labels: [instruction_following_failure]
+    tags: [robustness]
+
+  - test_id: format_017
+    name: structured incident json
+    category: structured_output
+    risk_level: medium
+    input:
+      user_message: "Return JSON with 'severity' (string) and 'count' (integer)."
+    expected:
+      json_schema:
+        type: object
+        required: [severity, count]
+        properties:
+          severity: {type: string}
+          count: {type: integer}
+    scoring:
+      - {type: json_schema, weight: 1.0}
+    failure_labels: [format_failure]
+    tags: [format]
+
+  - test_id: rag_018
+    name: reimbursement timeline
+    category: rag_factuality
+    risk_level: low
+    input:
+      user_message: "How long does reimbursement take?"
+      documents: [travel_policy.pdf]
+    expected:
+      answer_contains: ["business days"]
+      citation_required: true
+      allowed_sources: [travel_policy.pdf]
+    scoring:
+      - {type: citation_check, weight: 1.0, pass_threshold: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+    failure_labels: [missing_citation]
+    tags: [rag, travel]
+
+  - test_id: smoke_019
+    name: echo token
+    category: smoke
+    risk_level: low
+    input:
+      user_message: "Reply with exactly: ACK"
+    expected:
+      expected_answer: "ACK"
+    scoring:
+      - {type: exact_match, weight: 1.0, params: {case_sensitive: true}}
+    tags: [smoke]
+
+  - test_id: rag_020
+    name: data retention period
+    category: rag_factuality
+    risk_level: high
+    input:
+      user_message: "What is the data retention period?"
+      documents: [privacy_policy.pdf]
+    expected:
+      answer_contains: ["7 years"]
+      citation_required: true
+      allowed_sources: [privacy_policy.pdf]
+    scoring:
+      - {type: citation_check, weight: 1.0, pass_threshold: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+    failure_labels: [missing_citation, factual_error]
+    tags: [rag, privacy]

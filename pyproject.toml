@@ -1,0 +1,62 @@
+[project]
+name = "agon-eval-harness"
+version = "0.1.0"
+description = "Agon Eval Harness — an Inspect AI-based evaluation harness for AI systems. Excellence emerges through opposition."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+authors = [{ name = "Samuel R. Taylor" }]
+keywords = ["evals", "evaluation", "llm", "inspect-ai", "rag", "agents"]
+
+dependencies = [
+    "inspect-ai>=0.3.50",
+    "pydantic>=2.6,<3.0",
+    "pyyaml>=6.0",
+    "jinja2>=3.1",
+    "typer>=0.12",
+    "jsonschema>=4.21",
+    "rapidfuzz>=3.6",
+    "rouge-score>=0.1.2",
+]
+
+[project.optional-dependencies]
+# Embedding-based scorers — kept OFF the default offline path (downloads model weights).
+semantic = ["sentence-transformers>=2.7"]
+# Real LLM providers for non-offline runs (opt-in).
+providers = ["openai>=1.30", "anthropic>=0.40"]
+
+[project.scripts]
+agon = "agon.cli.app:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.6",
+    "mypy>=1.10",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agon"]
+artifacts = ["agon/**/*.jinja2"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.mypy]
+python_version = "3.12"
+packages = ["agon"]
+ignore_missing_imports = true

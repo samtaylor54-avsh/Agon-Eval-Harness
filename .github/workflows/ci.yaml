@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync dependencies
+        run: uv sync --dev
+
+      - name: Lint (ruff)
+        run: uv run ruff check agon tests
+
+      - name: Unit tests (pytest)
+        run: uv run pytest
+
+      - name: Offline smoke eval (no API key, deterministic gate)
+        # INSPECT_DISABLE_MODEL_API allows only mockllm — proves the offline repro path.
+        env:
+          INSPECT_DISABLE_MODEL_API: "1"
+        run: |
+          uv run agon run examples/datasets/rag_smoke.yaml \
+            --log-dir logs --report-dir reports --display none || true
+          test -n "$(ls reports/*.report.md 2>/dev/null)"
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agon-reports
+          path: reports/
