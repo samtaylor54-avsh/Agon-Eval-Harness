@@ -16,6 +16,29 @@ from agon.sut import build_solver, react_sut
 from agon.sut.solvers import SUTCallable
 
 
+def resilience_eval_kwargs(config: RunConfig) -> dict[str, Any]:
+    """Map RunConfig resilience knobs to inspect_ai.eval() kwargs.
+
+    Generation knobs (max_retries/timeout/attempt_timeout/max_connections) ride eval()'s
+    **GenerateConfigArgs; orchestration knobs (retry_on_error/time_limit/fail_on_error) are
+    explicit eval() params. Optional (None) knobs are omitted so Inspect keeps its own defaults.
+    """
+    r = config.resilience
+    kwargs: dict[str, Any] = {
+        "max_connections": config.max_connections,
+        "max_retries": r.max_retries,
+        "retry_on_error": r.retry_on_error,
+        "fail_on_error": r.fail_on_error,
+    }
+    if r.request_timeout is not None:
+        kwargs["timeout"] = r.request_timeout
+    if r.attempt_timeout is not None:
+        kwargs["attempt_timeout"] = r.attempt_timeout
+    if r.sample_time_limit is not None:
+        kwargs["time_limit"] = r.sample_time_limit
+    return kwargs
+
+
 def resolve_model(config: RunConfig) -> str:
     """Resolve the Inspect model string for the configured adapter.
 
@@ -73,8 +96,7 @@ def run_eval(
         model=resolve_model(config),
         log_dir=config.log_dir,
         display=display,
-        max_connections=config.max_connections,
-        fail_on_error=config.fail_fast,  # False → contain per-sample failures
+        **resilience_eval_kwargs(config),
     )
     return logs[0]
 
@@ -123,7 +145,6 @@ def run_agent_eval(
         model=resolve_model(config),
         log_dir=config.log_dir,
         display=display,
-        max_connections=config.max_connections,
-        fail_on_error=config.fail_fast,
+        **resilience_eval_kwargs(config),
     )
     return logs[0]
