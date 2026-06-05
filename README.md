@@ -189,7 +189,7 @@ The build is sequenced in three phases. Each ends with a public, independently r
 
 ### Phase 2 — Observability & Real Agentic Systems
 - [ ] OpenTelemetry GenAI instrumentation across every LLM call, tool call, and grader decision
-- [ ] RAG pipeline with **retrieval evals isolated from generation evals** (recall@k, MRR)
+- [x] **Retrieval evals isolated from generation** — recall@k / MRR / nDCG / hit@k, BM25 + LanceDB + RRF hybrid (M1; full RAG-pipeline integration pending)
 - [ ] LangGraph agent (ReAct + tool calling), evaluated for multi-turn behavior and goal completion
 - [ ] LangSmith integration: dataset versioning, run comparison, evaluator dashboards
 
@@ -246,6 +246,11 @@ uv run agon compare <current_run_id> <baseline_run_id>
 
 # 5. Validate an LLM judge against human labels before trusting it (needs a real judge model).
 uv run agon calibrate examples/calibration/labeled.yaml --judge-model openai/gpt-4o --min-kappa 0.6
+
+# 6. Isolated retrieval eval (recall@k / MRR / nDCG / hit@k) — offline BM25, no generation.
+uv sync --extra retrieval
+uv run agon retrieve examples/retrieval/corpus.yaml examples/retrieval/qrels.yaml --k 5
+#    → retrieval-only report, scored independently of any generation
 ```
 
 To evaluate a **real** system, point the SUT and judge at a provider via a run config
@@ -263,7 +268,8 @@ To evaluate a **real** system, point the SUT and judge at a provider via a run c
 | `analysis/` | Eval-log digests + regression comparator |
 | `reporting/` | Markdown / JSON / JUnit-XML + PASS/FAIL/INVESTIGATE recommendation |
 | `calibrate/` | Judge-vs-human agreement (Cohen's κ) |
-| `cli/` | `agon run · compare · report · review · calibrate` |
+| `retrieval/` | Isolated retrieval evals — BM25 + LanceDB + RRF hybrid, recall@k/MRR/nDCG/hit@k (Phase 2 M1) |
+| `cli/` | `agon run · compare · report · review · calibrate · retrieve` |
 
 > Note: the **Repository Structure (Target)** above is the long-term Phase 2/3 layout. The
 > shipped MVP lives under `agon/` with `examples/` and `tests/`.

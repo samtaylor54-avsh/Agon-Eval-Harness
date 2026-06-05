@@ -24,6 +24,9 @@ dependencies = [
 semantic = ["sentence-transformers>=2.7"]
 # Real LLM providers for non-offline runs (opt-in).
 providers = ["openai>=1.30", "anthropic>=0.40"]
+# Retrieval evals. BM25 (rank-bm25) is pure-Python + offline; LanceDB adds embedded
+# vector + hybrid search. The IR metric math is implemented natively (no ranx/numba).
+retrieval = ["rank-bm25>=0.2.2", "lancedb>=0.13"]
 
 [project.scripts]
 agon = "agon.cli.app:app"
