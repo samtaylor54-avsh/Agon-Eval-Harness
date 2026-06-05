@@ -4,9 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current State
 
-This repo is **early scaffolding (Week 0)**. As of this writing it contains only `README.md`, banner/logo images, and a `.a5c/` logs directory — **no source code, tests, build tooling, or `git` repository yet**. None of the directories in the "Repository Structure (Target)" section of the README exist yet; they are the planned layout, not the current one.
+**Phase 1 MVP is built** on Inspect AI. The shipped package is `agon/` (not the long-term
+"Repository Structure (Target)" layout in the README, which is the Phase 2/3 plan). It depends on
+the decision recorded in `docs/decisions/ADR-0001-inspect-vs-custom.md`: we build on **Inspect AI**
+and treat the PRD's hand-rolled SQLite/LiteLLM runner as superseded.
 
-Consequence: there are no build, lint, or test commands to run yet. When asked to "run tests" or "build," confirm the relevant code actually exists first rather than assuming the target structure is in place. As Phase 1 code lands, update this file with the real commands.
+Commands (run via `uv`):
+
+```bash
+uv sync                                   # install deps (Python pinned to 3.12 via .python-version)
+uv run pytest                             # full test suite (offline; uses mockllm)
+uv run ruff check agon tests              # lint
+uv run agon run examples/datasets/rag_smoke.yaml --display none   # offline smoke eval + reports
+uv run python examples/quickstart.py      # offline mixed-result demo via a stub SUT
+```
+
+Key layout: `agon/{schemas,dataset,sut,scoring,analysis,reporting,calibrate,review,task,config,cli}`,
+tests under `tests/`, fixtures/examples under `examples/`. The offline path uses Inspect's
+`mockllm/model` provider — no API key or model downloads — which is what keeps the run inside the
+<20-minute reproducibility budget. Judge-based and semantic scorers are opt-in (real provider /
+`[semantic]` extra). When adding a scorer, register it on `agon.scoring.default_registry` and add
+boundary tests; when fixing a failure mode, add the case that catches it to a dataset.
 
 ## What This Project Is
 

@@ -1,0 +1,24 @@
+# Example Agon run configuration. Load with: agon run <dataset> --config examples/run.toml
+# Defaults are offline-first; uncomment the litellm block to evaluate a real provider.
+
+system_version = "rag_agent_v0.1"
+epochs = 1
+flake_rule = "all"        # all | any | majority  (per-case "all" recommended for high risk)
+max_connections = 8
+log_dir = "logs"
+report_dir = "reports"
+pass_threshold = 0.90        # >= this overall pass rate (and no regression) -> PASS
+investigate_threshold = 0.80 # between thresholds -> INVESTIGATE; below -> FAIL
+
+[sut]
+adapter = "mockllm"          # offline default. Use "litellm" or "http" for real systems.
+# adapter = "litellm"
+# model = "openai/gpt-4o"
+temperature = 0.0
+seed = 42
+
+[judge]
+model = "mockllm/model"      # offline default. Use e.g. "openai/gpt-4o" for real judging.
+temperature = 0.0
+seed = 42
+max_tokens = 1024

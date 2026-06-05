@@ -1,0 +1,206 @@
+"""``agon`` command-line interface (PRD §26 Task 11).
+
+Commands: ``run``, ``compare``, ``report``, ``review``, ``calibrate``.
+
+Exit codes (CI gating):
+  0 — pass gate (recommendation PASS and no regression)
+  1 — fail gate (recommendation FAIL/INVESTIGATE or regression detected)
+  2 — abort (config / dataset / health-check error)
+"""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+
+import anyio
+import typer
+
+from agon.analysis import compare_runs, find_run
+from agon.calibrate import load_calibration_set, run_calibration
+from agon.config import load_run_config
+from agon.dataset import DatasetValidationError, load_dataset
+from agon.reporting import generate_reports
+from agon.review import save_review
+from agon.schemas import JudgeConfig, Recommendation, ReviewRecord, RunConfig
+from agon.scoring import JudgeClient
+from agon.scoring.judge import JudgeParseError
+from agon.sut import health_check
+from agon.task import run_eval
+
+app = typer.Typer(no_args_is_help=True, add_completion=False, help="Agon Eval Harness")
+
+ABORT = 2
+FAIL_GATE = 1
+PASS_GATE = 0
+
+
+@app.command()
+def run(
+    dataset: str = typer.Argument(..., help="Path to a dataset (.yaml/.json/.jsonl)"),
+    config: str = typer.Option(None, "--config", "-c", help="Run config (.toml/.yaml/.json)"),
+    system_version: str = typer.Option(None, "--system-version"),
+    model: str = typer.Option(None, "--model", help="LiteLLM model string (implies litellm)"),
+    adapter: str = typer.Option(None, "--adapter", help="mockllm|litellm|http"),
+    epochs: int = typer.Option(None, "--epochs", help="Repetitions per case"),
+    log_dir: str = typer.Option(None, "--log-dir"),
+    report_dir: str = typer.Option(None, "--report-dir"),
+    baseline: str = typer.Option(None, "--baseline", help="Baseline run_id for regression"),
+    display: str = typer.Option("plain", "--display", help="Inspect display: plain|rich|none"),
+) -> None:
+    """Run an eval suite and emit Markdown/JSON/JUnit reports + a release recommendation."""
+    cfg = load_run_config(config) if config else RunConfig()
+    if system_version:
+        cfg.system_version = system_version
+    if adapter:
+        cfg.sut.adapter = adapter
+    if model:
+        cfg.sut.model = model
+        if not adapter and cfg.sut.adapter == "mockllm":
+            cfg.sut.adapter = "litellm"
+    if epochs:
+        cfg.epochs = epochs
+    if log_dir:
+        cfg.log_dir = log_dir
+    if report_dir:
+        cfg.report_dir = report_dir
+    if baseline:
+        cfg.baseline_run = baseline
+
+    try:
+        ds = load_dataset(dataset)
+    except (DatasetValidationError, FileNotFoundError, ValueError) as exc:
+        typer.echo(f"[abort] {exc}", err=True)
+        raise typer.Exit(ABORT) from exc
+
+    if not anyio.run(health_check, cfg.sut):
+        typer.echo("[abort] SUT health check failed", err=True)
+        raise typer.Exit(ABORT)
+
+    log = run_eval(ds, cfg, display=display)
+    baseline_log = find_run(cfg.log_dir, cfg.baseline_run) if cfg.baseline_run else None
+    result = generate_reports(log, config=cfg, baseline_log=baseline_log, out_dir=cfg.report_dir)
+
+    d = result["digest"]
+    rec: Recommendation = result["recommendation"]
+    regression = result["regression"]
+    typer.echo(
+        f"\n{ds.name}: pass {d.overall_pass_rate * 100:.1f}% "
+        f"({sum(r.passed for r in d.records)}/{len(d.records)})  -> {rec.value}"
+    )
+    if regression is not None:
+        typer.echo(
+            f"regression vs {regression.baseline_run_id}: "
+            f"{'DETECTED' if regression.regression_detected else 'none'} "
+            f"(+{len(regression.new_failures)} new, -{len(regression.fixed_failures)} fixed)"
+        )
+    for path in result["written"].values():
+        typer.echo(f"  wrote {path}")
+
+    regressed = regression is not None and regression.regression_detected
+    if rec is Recommendation.PASS and not regressed:
+        raise typer.Exit(PASS_GATE)
+    raise typer.Exit(FAIL_GATE)
+
+
+@app.command()
+def compare(
+    current: str = typer.Argument(..., help="Current run_id"),
+    baseline: str = typer.Argument(..., help="Baseline run_id"),
+    log_dir: str = typer.Option("logs", "--log-dir"),
+) -> None:
+    """Compare two runs and report regressions. Exit 1 if a regression is detected."""
+    try:
+        cur = find_run(log_dir, current)
+        base = find_run(log_dir, baseline)
+    except FileNotFoundError as exc:
+        typer.echo(f"[abort] {exc}", err=True)
+        raise typer.Exit(ABORT) from exc
+    reg = compare_runs(cur, base)
+    typer.echo(f"regression detected: {reg.regression_detected}")
+    typer.echo(f"  new failures:   {', '.join(reg.new_failures) or 'none'}")
+    typer.echo(f"  fixed failures: {', '.join(reg.fixed_failures) or 'none'}")
+    for tid, old, new in reg.score_drops:
+        typer.echo(f"  drop {tid}: {old:.2f} ->{new:.2f}")
+    raise typer.Exit(FAIL_GATE if reg.regression_detected else PASS_GATE)
+
+
+@app.command()
+def report(
+    run_id: str = typer.Argument(..., help="Run id to report on"),
+    log_dir: str = typer.Option("logs", "--log-dir"),
+    report_dir: str = typer.Option("reports", "--report-dir"),
+    baseline: str = typer.Option(None, "--baseline"),
+) -> None:
+    """Regenerate reports for a stored run."""
+    try:
+        log = find_run(log_dir, run_id)
+        baseline_log = find_run(log_dir, baseline) if baseline else None
+    except FileNotFoundError as exc:
+        typer.echo(f"[abort] {exc}", err=True)
+        raise typer.Exit(ABORT) from exc
+    result = generate_reports(
+        log, config=RunConfig(), baseline_log=baseline_log, out_dir=report_dir
+    )
+    typer.echo(f"recommendation: {result['recommendation'].value}")
+    for path in result["written"].values():
+        typer.echo(f"  wrote {path}")
+
+
+@app.command()
+def review(
+    run_id: str = typer.Option(..., "--run-id"),
+    test_id: str = typer.Option(..., "--test-id"),
+    reviewer: str = typer.Option(..., "--reviewer"),
+    notes: str = typer.Option("", "--notes"),
+    override_passed: bool = typer.Option(None, "--override-passed/--override-failed"),
+    ambiguous: bool = typer.Option(False, "--ambiguous"),
+    reviews_dir: str = typer.Option("reviews", "--reviews-dir"),
+) -> None:
+    """Append a human review/override for a case (the eval log itself is never mutated)."""
+    record = ReviewRecord(
+        run_id=run_id,
+        test_id=test_id,
+        reviewer=reviewer,
+        override_passed=override_passed,
+        ambiguous=ambiguous,
+        notes=notes,
+        timestamp=datetime.now(UTC).isoformat(),
+    )
+    path = save_review(record, reviews_dir)
+    typer.echo(f"recorded review for {test_id} ->{path}")
+
+
+@app.command()
+def calibrate(
+    labeled: str = typer.Argument(..., help="Calibration set (.yaml) with human labels"),
+    judge_model: str = typer.Option("mockllm/model", "--judge-model"),
+    min_kappa: float = typer.Option(0.6, "--min-kappa", help="Minimum acceptable agreement"),
+) -> None:
+    """Validate a judge scorer against human labels. Exit 1 if agreement < min-kappa."""
+    try:
+        cset = load_calibration_set(labeled)
+    except (FileNotFoundError, ValueError) as exc:
+        typer.echo(f"[abort] {exc}", err=True)
+        raise typer.Exit(ABORT) from exc
+    judge = JudgeClient(JudgeConfig(model=judge_model))
+    try:
+        report = anyio.run(lambda: run_calibration(cset, judge, min_kappa=min_kappa))
+    except JudgeParseError as exc:
+        typer.echo(
+            f"[abort] judge '{judge_model}' returned unparseable output - calibration needs a "
+            f"real judge model (e.g. --judge-model openai/gpt-4o). Details: {exc}",
+            err=True,
+        )
+        raise typer.Exit(ABORT) from exc
+    typer.echo(
+        f"calibration [{report.scorer_type}] n={report.n} "
+        f"accuracy={report.accuracy:.2f} kappa={report.cohen_kappa:.2f} "
+        f"(min {report.min_kappa}) ->{'PASS' if report.passed else 'FAIL'}"
+    )
+    for tid, human, judged in report.disagreements:
+        typer.echo(f"  disagree {tid}: human={human} judge={judged}")
+    raise typer.Exit(PASS_GATE if report.passed else FAIL_GATE)
+
+
+if __name__ == "__main__":
+    app()

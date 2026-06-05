@@ -1,0 +1,29 @@
+name: bad_suite
+test_cases:
+  - test_id: GOOD_is_bad_case
+    name: uppercase id not allowed
+    category: smoke
+    input:
+      user_message: "hi"
+    scoring:
+      - type: exact_match
+  - test_id: missing_scoring
+    name: no scoring specs
+    category: smoke
+    input:
+      user_message: "hi"
+    scoring: []
+  - test_id: dup_id
+    name: first
+    category: smoke
+    input:
+      user_message: "hi"
+    scoring:
+      - type: exact_match
+  - test_id: dup_id
+    name: second with same id
+    category: smoke
+    input:
+      user_message: "hi"
+    scoring:
+      - type: exact_match
