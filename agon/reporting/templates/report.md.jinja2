@@ -31,6 +31,17 @@
 |---|---|---|---|---|
 {% for r in failed %}| {{ r.test_id }} | {{ r.category }} | {{ r.risk_level }} | {{ "%.2f"|format(r.composite_score) }} | {{ r.detected_failure_labels | join(", ") }} |
 {% endfor %}{% endif %}
+## Cost & usage
+| Metric | Value |
+|---|---|
+| Input tokens | {{ d.cost.usage.input }} |
+| Output tokens | {{ d.cost.usage.output }} |
+| Total tokens | {{ d.cost.usage.total }} |
+| Estimated cost | ${{ "%.4f"|format(d.cost.total_usd) }} (as of {{ d.cost.as_of }}{% if not d.cost.priced %}; partial -- see notes{% endif %}) |
+{% if d.cost.usage.total == 0 %}
+_Offline run (mockllm): no token usage, $0.0000._
+{% endif %}{% for n in d.cost.notes %}- note: {{ n }}
+{% endfor %}
 {% if retrieval_rows %}## Retrieval metrics (isolated from generation)
 | Test | {{ retrieval_cols | join(" | ") }} |
 |---|{% for _ in retrieval_cols %}---|{% endfor %}

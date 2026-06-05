@@ -92,6 +92,7 @@ def render_json(
         "pass_rate_by_risk": d.pass_rate_by_risk,
         "top_failure_labels": d.top_failure_labels,
         "error_count": d.error_count,
+        "cost": d.cost.model_dump(),
         "recommendation": recommendation.value,
         "results": [r.model_dump() for r in d.records],
         "regression": regression.model_dump() if regression else None,
