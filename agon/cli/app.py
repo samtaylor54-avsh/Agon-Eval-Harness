@@ -189,6 +189,54 @@ def trace(
 
 
 @app.command()
+def retrieve(
+    corpus: str = typer.Argument(..., help="Corpus file (.yaml/.json): documents to search"),
+    qrels: str = typer.Argument(..., help="Retrieval dataset (.yaml/.json): queries + gold IDs"),
+    k: int = typer.Option(10, "--k", help="Top-k cutoff for the metrics"),
+    retriever: str = typer.Option("bm25", "--retriever", help="bm25 | lancedb | hybrid"),
+    log_dir: str = typer.Option("logs", "--log-dir"),
+    report_dir: str = typer.Option("reports", "--report-dir"),
+) -> None:
+    """Run an isolated retrieval eval (recall@k / MRR / nDCG / hit@k) — no generation."""
+    from agon.retrieval import (
+        BM25Retriever,
+        HybridRetriever,
+        LanceDBRetriever,
+        generate_retrieval_reports,
+        load_corpus,
+        load_retrieval_dataset,
+        run_retrieval_eval,
+    )
+
+    try:
+        corpus_obj = load_corpus(corpus)
+        dataset = load_retrieval_dataset(qrels)
+    except (FileNotFoundError, ValueError) as exc:
+        typer.echo(f"[abort] {exc}", err=True)
+        raise typer.Exit(ABORT) from exc
+
+    if retriever == "bm25":
+        impl = BM25Retriever()
+    elif retriever == "lancedb":
+        impl = LanceDBRetriever()  # default embedder needs the [semantic] extra
+    elif retriever == "hybrid":
+        impl = HybridRetriever(LanceDBRetriever(), BM25Retriever())
+    else:
+        typer.echo(f"[abort] unknown retriever {retriever!r}", err=True)
+        raise typer.Exit(ABORT)
+
+    log = run_retrieval_eval(corpus_obj, dataset, retriever=impl, k=k, log_dir=log_dir)
+    result = generate_retrieval_reports(log, out_dir=report_dir)
+    means = result["digest"]["means"]
+    typer.echo(
+        f"\n{dataset.name} [{retriever}]: recall@{k}={means['recall']:.3f} "
+        f"MRR={means['mrr']:.3f} nDCG@{k}={means['ndcg']:.3f} hit@{k}={means['hit']:.3f}"
+    )
+    for path in result["written"].values():
+        typer.echo(f"  wrote {path}")
+
+
+@app.command()
 def review(
     run_id: str = typer.Option(..., "--run-id"),
     test_id: str = typer.Option(..., "--test-id"),

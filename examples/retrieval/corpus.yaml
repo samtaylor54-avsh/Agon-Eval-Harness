@@ -1,0 +1,43 @@
+# Example retrieval corpus — 20 short HR/policy passages (offline, BM25-friendly).
+name: hr_policy_corpus
+documents:
+  - doc_id: emergency_leave
+    text: "Emergency leave requires supervisor approval and may be granted for urgent family or medical situations. Submit the request within 48 hours."
+  - doc_id: remote_work
+    text: "Remote work is available to eligible employees with manager approval. Remote workers must maintain core hours and a secure home network."
+  - doc_id: meal_expenses
+    text: "The daily meal expense limit is $75 for domestic travel and $100 for international travel. Alcohol is not reimbursable."
+  - doc_id: parental_leave
+    text: "Parental leave provides twelve weeks of paid time off for the birth or adoption of a child. Notify HR at least thirty days in advance."
+  - doc_id: pto_accrual
+    text: "Paid time off accrues at 1.5 days per month for full-time staff. Unused PTO carries over up to a maximum of ten days per year."
+  - doc_id: benefits_enrollment
+    text: "Open benefits enrollment runs each November. Changes to health, dental, and vision plans take effect on January first."
+  - doc_id: security_badge
+    text: "A lost security badge must be reported immediately to the security desk. A temporary badge will be issued pending replacement."
+  - doc_id: data_retention
+    text: "Customer data is retained for seven years to satisfy regulatory requirements, after which it is securely deleted."
+  - doc_id: reimbursement_timeline
+    text: "Approved expense reimbursements are paid within five business days via direct deposit. Submit receipts through the expense portal."
+  - doc_id: code_of_conduct
+    text: "The code of conduct prohibits conflicts of interest, insider trading, and acceptance of gifts exceeding fifty dollars from vendors."
+  - doc_id: travel_booking
+    text: "All business travel must be booked through the corporate travel portal at least fourteen days before departure to secure preferred rates."
+  - doc_id: password_policy
+    text: "Passwords must be at least sixteen characters, rotated every ninety days, and never reused across systems. Enable multifactor authentication."
+  - doc_id: incident_reporting
+    text: "Security incidents must be reported to the response team within one hour of discovery. Do not attempt to remediate compromised systems alone."
+  - doc_id: onboarding
+    text: "New hire onboarding covers payroll setup, equipment provisioning, and mandatory compliance training during the first week of employment."
+  - doc_id: performance_reviews
+    text: "Performance reviews are conducted twice per year. Managers and employees complete self assessments before the calibration meeting."
+  - doc_id: harassment_policy
+    text: "Workplace harassment is strictly prohibited. Reports can be made confidentially to HR or through the anonymous ethics hotline."
+  - doc_id: equipment_policy
+    text: "Company laptops and phones remain company property. Report damaged or stolen equipment to IT support within one business day."
+  - doc_id: vpn_access
+    text: "Remote access to internal systems requires the corporate VPN. Split tunneling is disabled and all traffic is inspected for compliance."
+  - doc_id: expense_approval
+    text: "Expenses over five hundred dollars require director approval before purchase. Itemized receipts are mandatory for every reimbursement."
+  - doc_id: holiday_schedule
+    text: "The company observes eleven paid holidays each year. The holiday schedule is published every December for the following year."

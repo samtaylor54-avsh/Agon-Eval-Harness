@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from inspect_ai import Epochs, Task, eval
 from inspect_ai.dataset import MemoryDataset
 from inspect_ai.log import EvalLog
@@ -10,7 +12,7 @@ from agon.dataset import to_samples
 from agon.schemas import AgonDataset, RunConfig
 from agon.scoring import JudgeClient, flake_reducer
 from agon.scoring.inspect_scorer import agon_scorer
-from agon.sut import build_solver
+from agon.sut import build_solver, react_sut
 from agon.sut.solvers import SUTCallable
 
 
@@ -73,5 +75,55 @@ def run_eval(
         display=display,
         max_connections=config.max_connections,
         fail_on_error=config.fail_fast,  # False → contain per-sample failures
+    )
+    return logs[0]
+
+
+def agent_task(
+    dataset: AgonDataset,
+    tools: list[Any],
+    config: RunConfig,
+    *,
+    prompt: str | None = None,
+    attempts: int = 1,
+    judge: JudgeClient | None = None,
+) -> Task:
+    """Build a Task whose SUT is a native ReAct agent over the given tools (M2)."""
+    judge = judge or JudgeClient(config.judge)
+    epochs: int | Epochs = config.epochs
+    if config.epochs > 1:
+        epochs = Epochs(config.epochs, flake_reducer(config.flake_rule, config.epochs))
+    return Task(
+        dataset=MemoryDataset(samples=to_samples(dataset), name=dataset.name),
+        solver=react_sut(tools, prompt=prompt, attempts=attempts),
+        scorer=agon_scorer(judge=judge),
+        epochs=epochs,
+        name=dataset.name,
+        metadata={
+            "dataset_version": dataset.dataset_version,
+            "system_version": config.system_version,
+        },
+    )
+
+
+def run_agent_eval(
+    dataset: AgonDataset,
+    tools: list[Any],
+    config: RunConfig,
+    *,
+    prompt: str | None = None,
+    attempts: int = 1,
+    judge: JudgeClient | None = None,
+    display: str = "none",
+) -> EvalLog:
+    """Run a ReAct-agent eval and return the EvalLog."""
+    task = agent_task(dataset, tools, config, prompt=prompt, attempts=attempts, judge=judge)
+    logs = eval(
+        task,
+        model=resolve_model(config),
+        log_dir=config.log_dir,
+        display=display,
+        max_connections=config.max_connections,
+        fail_on_error=config.fail_fast,
     )
     return logs[0]

@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from agon.analysis import latest_run
@@ -9,6 +10,7 @@ from agon.cli import app
 
 runner = CliRunner()
 FIXTURES = Path(__file__).parent / "fixtures"
+EXAMPLES = Path(__file__).parent.parent / "examples"
 
 
 def test_run_emits_artifacts_and_gate_code(tmp_path):
@@ -74,3 +76,21 @@ def test_run_missing_dataset_aborts(tmp_path):
         app, ["run", str(tmp_path / "nope.yaml"), "--display", "none"]
     )
     assert result.exit_code == 2
+
+
+def test_retrieve_command_offline(tmp_path):
+    pytest.importorskip("rank_bm25")
+    result = runner.invoke(
+        app,
+        [
+            "retrieve",
+            str(EXAMPLES / "retrieval" / "corpus.yaml"),
+            str(EXAMPLES / "retrieval" / "qrels.yaml"),
+            "--k", "5",
+            "--log-dir", str(tmp_path / "logs"),
+            "--report-dir", str(tmp_path / "reports"),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "recall@5=" in result.stdout
+    assert list((tmp_path / "reports").glob("*.retrieval.md"))
