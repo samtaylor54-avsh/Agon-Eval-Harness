@@ -189,7 +189,7 @@ The build is sequenced in three phases. Each ends with a public, independently r
 
 ### Phase 2 — Observability & Real Agentic Systems
 - [ ] OpenTelemetry GenAI instrumentation across every LLM call, tool call, and grader decision
-- [ ] RAG pipeline with **retrieval evals isolated from generation evals** (recall@k, MRR)
+- [x] **Retrieval evals isolated from generation** — recall@k / MRR / nDCG / hit@k, BM25 + LanceDB + RRF hybrid (M1; full RAG-pipeline integration pending)
 - [x] **Agent evaluation** — `tool_use` / `planning` / `step_efficiency` scorers over a tool-call trajectory; native Inspect ReAct agent SUT (offline). LangGraph bridge shipped **experimental** (see ADR-0004 for current inspect/langchain incompatibilities)
 - [ ] LangSmith integration: dataset versioning, run comparison, evaluator dashboards
 
@@ -250,6 +250,11 @@ uv run agon calibrate examples/calibration/labeled.yaml --judge-model openai/gpt
 # 6. Evaluate a tool-using ReAct agent offline (tool_use / planning / step_efficiency).
 uv run python examples/agent_quickstart.py
 #    → catches a wrong-tool case as a tool_omission failure
+
+# 7. Isolated retrieval eval (recall@k / MRR / nDCG / hit@k) — offline BM25, no generation.
+uv sync --extra retrieval
+uv run agon retrieve examples/retrieval/corpus.yaml examples/retrieval/qrels.yaml --k 5
+#    → retrieval-only report, scored independently of any generation
 ```
 
 To evaluate a **real** system, point the SUT and judge at a provider via a run config
@@ -267,9 +272,10 @@ To evaluate a **real** system, point the SUT and judge at a provider via a run c
 | `analysis/` | Eval-log digests + regression comparator |
 | `reporting/` | Markdown / JSON / JUnit-XML + PASS/FAIL/INVESTIGATE recommendation |
 | `calibrate/` | Judge-vs-human agreement (Cohen's κ) |
+| `retrieval/` | Isolated retrieval evals — BM25 + LanceDB + RRF hybrid, recall@k/MRR/nDCG/hit@k (Phase 2 M1) |
 | `sut/` (agent) | Native ReAct agent SUT + message→trajectory normalization; experimental LangGraph bridge (Phase 2 M2) |
 | `scoring/` (agent) | `tool_use` / `planning` / `step_efficiency` trajectory scorers (Phase 2 M2) |
-| `cli/` | `agon run · compare · report · review · calibrate` |
+| `cli/` | `agon run · compare · report · review · calibrate · retrieve` |
 
 > Note: the **Repository Structure (Target)** above is the long-term Phase 2/3 layout. The
 > shipped MVP lives under `agon/` with `examples/` and `tests/`.

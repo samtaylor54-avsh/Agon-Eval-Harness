@@ -15,7 +15,8 @@ jobs:
         uses: astral-sh/setup-uv@v8.2.0
 
       - name: Sync dependencies
-        run: uv sync --dev
+        # Include the [retrieval] extra (lancedb + rank-bm25) — light, no model downloads.
+        run: uv sync --extra retrieval
 
       - name: Lint (ruff)
         run: uv run ruff check agon tests
