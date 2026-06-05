@@ -17,6 +17,7 @@ uv run pytest                             # full test suite (offline; uses mockl
 uv run ruff check agon tests              # lint
 uv run agon run examples/datasets/rag_smoke.yaml --display none   # offline smoke eval + reports
 uv run python examples/quickstart.py      # offline mixed-result demo via a stub SUT
+uv run agon trace <run_id> --backend console   # export a run as OpenTelemetry spans (needs [otel] extra)
 ```
 
 Key layout: `agon/{schemas,dataset,sut,scoring,analysis,reporting,calibrate,review,task,config,cli}`,

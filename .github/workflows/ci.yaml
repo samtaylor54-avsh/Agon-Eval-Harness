@@ -15,7 +15,9 @@ jobs:
         uses: astral-sh/setup-uv@v8.2.0
 
       - name: Sync dependencies
-        run: uv sync --dev
+        # Include the [otel] extra (opentelemetry sdk) — light, no model downloads — so the
+        # observability export tests run in CI.
+        run: uv sync --extra otel
 
       - name: Lint (ruff)
         run: uv run ruff check agon tests

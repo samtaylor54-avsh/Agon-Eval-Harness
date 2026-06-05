@@ -188,7 +188,7 @@ The build is sequenced in three phases. Each ends with a public, independently r
 - [x] Documented error taxonomy mapping failure modes to the evals that catch them (`detected_failure_labels`)
 
 ### Phase 2 — Observability & Real Agentic Systems
-- [ ] OpenTelemetry GenAI instrumentation across every LLM call, tool call, and grader decision
+- [x] **OpenTelemetry GenAI export** — eval runs → `gen_ai.*` span tree (model/tool/grader); console (offline), LangSmith (OTLP), or Grafana Tempo backends (`agon trace`, ADR-0003)
 - [ ] RAG pipeline with **retrieval evals isolated from generation evals** (recall@k, MRR)
 - [ ] LangGraph agent (ReAct + tool calling), evaluated for multi-turn behavior and goal completion
 - [ ] LangSmith integration: dataset versioning, run comparison, evaluator dashboards
@@ -246,6 +246,11 @@ uv run agon compare <current_run_id> <baseline_run_id>
 
 # 5. Validate an LLM judge against human labels before trusting it (needs a real judge model).
 uv run agon calibrate examples/calibration/labeled.yaml --judge-model openai/gpt-4o --min-kappa 0.6
+
+# 6. Export a run as OpenTelemetry GenAI spans — offline to console (no account needed).
+uv sync --extra otel
+uv run agon trace <run_id> --backend console
+#    → or --backend langsmith / --backend otlp (Grafana Tempo). See docs/observability.md
 ```
 
 To evaluate a **real** system, point the SUT and judge at a provider via a run config
@@ -263,7 +268,8 @@ To evaluate a **real** system, point the SUT and judge at a provider via a run c
 | `analysis/` | Eval-log digests + regression comparator |
 | `reporting/` | Markdown / JSON / JUnit-XML + PASS/FAIL/INVESTIGATE recommendation |
 | `calibrate/` | Judge-vs-human agreement (Cohen's κ) |
-| `cli/` | `agon run · compare · report · review · calibrate` |
+| `observability/` | Export eval runs as OpenTelemetry GenAI spans → console / LangSmith / Tempo (Phase 2 M3) |
+| `cli/` | `agon run · compare · report · review · calibrate · trace` |
 
 > Note: the **Repository Structure (Target)** above is the long-term Phase 2/3 layout. The
 > shipped MVP lives under `agon/` with `examples/` and `tests/`.
