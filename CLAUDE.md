@@ -17,6 +17,7 @@ uv run pytest                             # full test suite (offline; uses mockl
 uv run ruff check agon tests              # lint
 uv run agon run examples/datasets/rag_smoke.yaml --display none   # offline smoke eval + reports
 uv run python examples/quickstart.py      # offline mixed-result demo via a stub SUT
+uv run python examples/agent_quickstart.py  # offline ReAct-agent eval (tool_use/planning/step_efficiency)
 ```
 
 Key layout: `agon/{schemas,dataset,sut,scoring,analysis,reporting,calibrate,review,task,config,cli}`,

@@ -190,7 +190,7 @@ The build is sequenced in three phases. Each ends with a public, independently r
 ### Phase 2 — Observability & Real Agentic Systems
 - [ ] OpenTelemetry GenAI instrumentation across every LLM call, tool call, and grader decision
 - [ ] RAG pipeline with **retrieval evals isolated from generation evals** (recall@k, MRR)
-- [ ] LangGraph agent (ReAct + tool calling), evaluated for multi-turn behavior and goal completion
+- [x] **Agent evaluation** — `tool_use` / `planning` / `step_efficiency` scorers over a tool-call trajectory; native Inspect ReAct agent SUT (offline). LangGraph bridge shipped **experimental** (see ADR-0004 for current inspect/langchain incompatibilities)
 - [ ] LangSmith integration: dataset versioning, run comparison, evaluator dashboards
 
 ### Phase 3 — Red Team, Domain & Thesis
@@ -246,6 +246,10 @@ uv run agon compare <current_run_id> <baseline_run_id>
 
 # 5. Validate an LLM judge against human labels before trusting it (needs a real judge model).
 uv run agon calibrate examples/calibration/labeled.yaml --judge-model openai/gpt-4o --min-kappa 0.6
+
+# 6. Evaluate a tool-using ReAct agent offline (tool_use / planning / step_efficiency).
+uv run python examples/agent_quickstart.py
+#    → catches a wrong-tool case as a tool_omission failure
 ```
 
 To evaluate a **real** system, point the SUT and judge at a provider via a run config
@@ -263,6 +267,8 @@ To evaluate a **real** system, point the SUT and judge at a provider via a run c
 | `analysis/` | Eval-log digests + regression comparator |
 | `reporting/` | Markdown / JSON / JUnit-XML + PASS/FAIL/INVESTIGATE recommendation |
 | `calibrate/` | Judge-vs-human agreement (Cohen's κ) |
+| `sut/` (agent) | Native ReAct agent SUT + message→trajectory normalization; experimental LangGraph bridge (Phase 2 M2) |
+| `scoring/` (agent) | `tool_use` / `planning` / `step_efficiency` trajectory scorers (Phase 2 M2) |
 | `cli/` | `agon run · compare · report · review · calibrate` |
 
 > Note: the **Repository Structure (Target)** above is the long-term Phase 2/3 layout. The

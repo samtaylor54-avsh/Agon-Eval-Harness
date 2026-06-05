@@ -24,6 +24,11 @@ dependencies = [
 semantic = ["sentence-transformers>=2.7"]
 # Real LLM providers for non-offline runs (opt-in).
 providers = ["openai>=1.30", "anthropic>=0.40"]
+# Agent evaluation: bridge a real LangGraph ReAct agent as the SUT via Inspect's agent_bridge.
+# googleapis-common-protos provides the `google` namespace the inspect bridge's find_spec needs
+# (works around an upstream bug — see ADR-0004). Bridge is experimental; native react() is the
+# offline path and needs none of this.
+langgraph = ["langgraph>=0.6", "langchain-openai>=0.2", "googleapis-common-protos>=1.60"]
 
 [project.scripts]
 agon = "agon.cli.app:app"
