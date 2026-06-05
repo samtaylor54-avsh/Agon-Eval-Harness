@@ -30,4 +30,4 @@ __all__ = [
 ]
 
 # Importing the scorer modules registers them on the default registry as a side effect.
-from agon.scoring import agent, llm, non_llm  # noqa: E402,F401
+from agon.scoring import adversarial, agent, llm, non_llm  # noqa: E402,F401
