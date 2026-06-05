@@ -39,6 +39,7 @@ def estimate_cost(
 ) -> CostEstimate:
     """Cost for one model's usage. Zero usage is free (and unnoted); unknown non-zero usage is
     unpriced with a note."""
+    # Zero usage is always free -- avoids spurious "no price" notes on offline mockllm runs.
     if usage.total == 0:
         return CostEstimate(model=model, priced=True)
     rates = price_for(model, prices)

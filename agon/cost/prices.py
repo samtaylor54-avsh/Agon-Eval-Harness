@@ -26,6 +26,8 @@ def normalize_model(model: str) -> str:
     return key.lower()
 
 
-def price_for(model: str, prices: dict[str, tuple[float, float]] = DEFAULT_PRICES):
+def price_for(
+    model: str, prices: dict[str, tuple[float, float]] = DEFAULT_PRICES
+) -> tuple[float, float] | None:
     """Return (input_rate, output_rate) per 1M tokens, or None if the model is not in the table."""
     return prices.get(normalize_model(model))
