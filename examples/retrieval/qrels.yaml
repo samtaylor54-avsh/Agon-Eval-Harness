@@ -1,0 +1,19 @@
+# Example qrels — 16 queries with gold relevant doc IDs (against corpus.yaml).
+name: hr_policy_qrels
+cases:
+  - {query_id: q01, query: "how do I get emergency leave approved", relevant_doc_ids: [emergency_leave]}
+  - {query_id: q02, query: "am I eligible to work remotely from home", relevant_doc_ids: [remote_work]}
+  - {query_id: q03, query: "what is the daily meal expense limit for travel", relevant_doc_ids: [meal_expenses]}
+  - {query_id: q04, query: "how many weeks of parental leave do I get", relevant_doc_ids: [parental_leave]}
+  - {query_id: q05, query: "how fast does paid time off accrue per month", relevant_doc_ids: [pto_accrual]}
+  - {query_id: q06, query: "when is open benefits enrollment", relevant_doc_ids: [benefits_enrollment]}
+  - {query_id: q07, query: "I lost my security badge what do I do", relevant_doc_ids: [security_badge]}
+  - {query_id: q08, query: "how long is customer data retained", relevant_doc_ids: [data_retention]}
+  - {query_id: q09, query: "when will my expense reimbursement be paid", relevant_doc_ids: [reimbursement_timeline, expense_approval]}
+  - {query_id: q10, query: "how often must passwords be rotated and not reused", relevant_doc_ids: [password_policy]}
+  - {query_id: q11, query: "how quickly must a security incident be reported", relevant_doc_ids: [incident_reporting]}
+  - {query_id: q12, query: "what happens during new hire onboarding", relevant_doc_ids: [onboarding]}
+  - {query_id: q13, query: "how do I report workplace harassment confidentially", relevant_doc_ids: [harassment_policy]}
+  - {query_id: q14, query: "do I need VPN for remote access to internal systems", relevant_doc_ids: [vpn_access, remote_work]}
+  - {query_id: q15, query: "who approves expenses over five hundred dollars", relevant_doc_ids: [expense_approval]}
+  - {query_id: q16, query: "how many paid holidays are there", relevant_doc_ids: [holiday_schedule]}

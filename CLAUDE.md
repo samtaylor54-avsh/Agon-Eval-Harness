@@ -17,9 +17,10 @@ uv run pytest                             # full test suite (offline; uses mockl
 uv run ruff check agon tests              # lint
 uv run agon run examples/datasets/rag_smoke.yaml --display none   # offline smoke eval + reports
 uv run python examples/quickstart.py      # offline mixed-result demo via a stub SUT
+uv sync --extra retrieval && uv run agon retrieve examples/retrieval/corpus.yaml examples/retrieval/qrels.yaml  # isolated retrieval eval
 ```
 
-Key layout: `agon/{schemas,dataset,sut,scoring,analysis,reporting,calibrate,review,task,config,cli}`,
+Key layout: `agon/{schemas,dataset,sut,scoring,analysis,reporting,calibrate,review,retrieval,task,config,cli}`,
 tests under `tests/`, fixtures/examples under `examples/`. The offline path uses Inspect's
 `mockllm/model` provider — no API key or model downloads — which is what keeps the run inside the
 <20-minute reproducibility budget. Judge-based and semantic scorers are opt-in (real provider /
