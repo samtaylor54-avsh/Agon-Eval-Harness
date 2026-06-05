@@ -194,7 +194,7 @@ The build is sequenced in three phases. Each ends with a public, independently r
 - [ ] LangSmith integration: dataset versioning, run comparison, evaluator dashboards
 
 ### Phase 3 — Red Team, Domain & Thesis
-- [ ] Adversarial suite mapped to OWASP Top 10 for Agentic Applications (prompt injection, goal hijacking, memory poisoning, tool misuse)
+- [x] **Adversarial suite (first cut)** — OWASP-for-Agents failure modes (prompt injection, goal hijacking, memory poisoning, tool misuse) detected fully offline via scripted vulnerable/resistant agents (M4, ADR-0005); full Top-10 + real-provider red-team pending
 - [ ] Regulated-domain eval harness (consequential-decision analog; synthetic data only)
 - [ ] Published methodology essay on what we measure when we measure an agentic system
 - [ ] Open-source contribution to `inspect_evals` or equivalent
@@ -260,6 +260,10 @@ uv run agon retrieve examples/retrieval/corpus.yaml examples/retrieval/qrels.yam
 uv sync --extra otel
 uv run agon trace <run_id> --backend console
 #    → or --backend langsmith / --backend otlp (Grafana Tempo). See docs/observability.md
+
+# 9. Run the offline OWASP adversarial suite (4 attacks caught, 4 controls pass).
+uv run python examples/adversarial_quickstart.py
+#    -> scripted vulnerable/resistant agent; OWASP scorecard via per-category reporting
 ```
 
 To evaluate a **real** system, point the SUT and judge at a provider via a run config

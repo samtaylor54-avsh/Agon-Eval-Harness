@@ -20,6 +20,7 @@ uv run python examples/quickstart.py      # offline mixed-result demo via a stub
 uv run python examples/agent_quickstart.py  # offline ReAct-agent eval (tool_use/planning/step_efficiency)
 uv sync --extra retrieval && uv run agon retrieve examples/retrieval/corpus.yaml examples/retrieval/qrels.yaml  # isolated retrieval eval
 uv run agon trace <run_id> --backend console   # export a run as OpenTelemetry spans (needs [otel] extra)
+uv run python examples/adversarial_quickstart.py  # offline OWASP adversarial suite (4 attacks caught, 4 controls pass)
 ```
 
 Key layout: `agon/{schemas,dataset,sut,scoring,analysis,reporting,calibrate,review,retrieval,task,config,cli}`,
