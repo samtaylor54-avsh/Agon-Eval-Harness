@@ -22,6 +22,7 @@ from agon.sut.contract import (
     SUT_RESPONSE_KEY,
     SUTRequest,
     SUTResponse,
+    TokenUsage,
     map_http_response,
 )
 
@@ -51,9 +52,20 @@ def agon_generate_solver() -> Solver:
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         state = await generate(state)
+        usage = getattr(state.output, "usage", None)
+        token_usage = (
+            TokenUsage(
+                input=usage.input_tokens,
+                output=usage.output_tokens,
+                total=usage.total_tokens,
+            )
+            if usage is not None
+            else TokenUsage()
+        )
         response = SUTResponse(
             final_answer=state.output.completion or "",
             trace_id=f"{state.sample_id}_{getattr(state, 'epoch', 1)}",
+            token_usage=token_usage,
             error=state.output.error,
         )
         _attach(state, response)
