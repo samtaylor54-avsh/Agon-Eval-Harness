@@ -16,7 +16,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 SAFETY_SCORER_TYPE = "safety"
 
@@ -138,6 +138,13 @@ class ResilienceConfig(BaseModel):
     retry_on_error: int = Field(default=0, ge=0)  # per-sample retries
     sample_time_limit: int | None = Field(default=None, ge=1)  # per-sample wall-clock cap (s)
     fail_on_error: bool | float = False  # True/False, or an error-rate threshold in 0..1
+
+    @field_validator("fail_on_error")
+    @classmethod
+    def _validate_fail_on_error(cls, v: bool | float) -> bool | float:
+        if isinstance(v, float) and not (0.0 <= v <= 1.0):
+            raise ValueError("fail_on_error float must be in 0..1")
+        return v
 
 
 class SUTConfig(BaseModel):

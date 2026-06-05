@@ -1,5 +1,8 @@
 """Phase 3 M5 — resilience config surface + offline fault-injection behavior."""
 
+import pytest
+from pydantic import ValidationError
+
 from agon.schemas import ResilienceConfig, RunConfig
 from agon.task.builder import resilience_eval_kwargs
 
@@ -12,6 +15,16 @@ def test_resilience_defaults():
     assert r.request_timeout is None
     assert r.attempt_timeout is None
     assert r.sample_time_limit is None
+
+
+def test_resilience_rejects_out_of_range_fail_on_error():
+    with pytest.raises(ValidationError):
+        ResilienceConfig(fail_on_error=1.5)
+    with pytest.raises(ValidationError):
+        ResilienceConfig(fail_on_error=-0.1)
+    # bools and in-range floats are fine:
+    assert ResilienceConfig(fail_on_error=True).fail_on_error is True
+    assert ResilienceConfig(fail_on_error=0.25).fail_on_error == 0.25
 
 
 def test_runconfig_has_resilience_and_no_fail_fast():
