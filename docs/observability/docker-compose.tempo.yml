@@ -1,0 +1,25 @@
+# Minimal Grafana Tempo + Grafana stack for viewing Agon's OTLP GenAI traces.
+# Usage:
+#   docker compose -f docs/observability/docker-compose.tempo.yml up -d
+#   uv run agon trace <run_id> --backend otlp --endpoint http://localhost:4318/v1/traces
+#   open http://localhost:3000  (Grafana; Tempo datasource is provisioned)
+services:
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml
+    ports:
+      - "4318:4318"   # OTLP/HTTP (agon trace --backend otlp points here)
+      - "3200:3200"   # Tempo query API
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    ports:
+      - "3000:3000"
+    depends_on:
+      - tempo

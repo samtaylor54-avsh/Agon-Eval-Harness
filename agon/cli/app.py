@@ -147,6 +147,48 @@ def report(
 
 
 @app.command()
+def trace(
+    run_id: str = typer.Argument(..., help="Run id to export as OpenTelemetry spans"),
+    log_dir: str = typer.Option("logs", "--log-dir"),
+    backend: str = typer.Option("console", "--backend", help="console | langsmith | otlp"),
+    endpoint: str = typer.Option(None, "--endpoint", help="OTLP endpoint (otlp backend)"),
+) -> None:
+    """Export a stored run as OpenTelemetry GenAI spans (console offline / LangSmith / OTLP)."""
+    try:
+        from agon.observability import (
+            console_tracer,
+            export_eval_log,
+            langsmith_tracer,
+            otlp_tracer,
+        )
+    except ImportError as exc:
+        typer.echo("[abort] observability needs the [otel] extra: uv sync --extra otel", err=True)
+        raise typer.Exit(ABORT) from exc
+
+    try:
+        log = find_run(log_dir, run_id)
+    except FileNotFoundError as exc:
+        typer.echo(f"[abort] {exc}", err=True)
+        raise typer.Exit(ABORT) from exc
+
+    if backend == "console":
+        tracer = console_tracer()
+    elif backend == "langsmith":
+        tracer = langsmith_tracer()
+    elif backend == "otlp":
+        if not endpoint:
+            typer.echo("[abort] otlp backend requires --endpoint", err=True)
+            raise typer.Exit(ABORT)
+        tracer = otlp_tracer(endpoint)
+    else:
+        typer.echo(f"[abort] unknown backend {backend!r}", err=True)
+        raise typer.Exit(ABORT)
+
+    count = export_eval_log(log, tracer)
+    typer.echo(f"exported {count} spans to {backend}")
+
+
+@app.command()
 def retrieve(
     corpus: str = typer.Argument(..., help="Corpus file (.yaml/.json): documents to search"),
     qrels: str = typer.Argument(..., help="Retrieval dataset (.yaml/.json): queries + gold IDs"),

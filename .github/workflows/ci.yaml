@@ -15,8 +15,9 @@ jobs:
         uses: astral-sh/setup-uv@v8.2.0
 
       - name: Sync dependencies
-        # Include the [retrieval] extra (lancedb + rank-bm25) — light, no model downloads.
-        run: uv sync --extra retrieval
+        # Include the [retrieval] (lancedb + rank-bm25) and [otel] (opentelemetry sdk) extras —
+        # both light, no model downloads — so retrieval and observability export tests run in CI.
+        run: uv sync --extra retrieval --extra otel
 
       - name: Lint (ruff)
         run: uv run ruff check agon tests
