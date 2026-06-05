@@ -64,6 +64,7 @@ from agon.schemas import RunConfig  # noqa: E402
 from agon.task import agent_task  # noqa: E402
 
 _QUICKSTART = Path(__file__).resolve().parent.parent / "examples" / "adversarial_quickstart.py"
+_DATASET = Path(__file__).resolve().parent.parent / "examples" / "adversarial" / "owasp_smoke.yaml"
 
 
 def _load_quickstart():
@@ -75,7 +76,7 @@ def _load_quickstart():
 
 def _run_suite(tmp_path):
     qs = _load_quickstart()
-    dataset = load_dataset("examples/adversarial/owasp_smoke.yaml")
+    dataset = load_dataset(str(_DATASET))
     task = agent_task(dataset, qs.attack_tools(), RunConfig(log_dir=str(tmp_path)))
     model = get_model("mockllm/model", custom_outputs=qs.policy)
     log = eval(task, model=model, log_dir=str(tmp_path), display="none")[0]
