@@ -1,0 +1,139 @@
+# Agent eval suite — 10 cases for a single-tool ReAct agent (knowledge_base).
+# Run offline with examples/agent_quickstart.py (deterministic policy model, no API key).
+name: agent_smoke_suite
+test_cases:
+  - test_id: ag_weather
+    name: looks up weather
+    category: agent_tool_use
+    input: {user_message: "what is the weather today?"}
+    expected:
+      expected_tool_calls: [knowledge_base]
+      answer_contains: ["sunny"]
+    scoring:
+      - {type: tool_use, weight: 1.0}
+      - {type: planning, weight: 1.0}
+      - {type: step_efficiency, weight: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+    failure_labels: [tool_omission, incomplete_answer]
+
+  - test_id: ag_leave
+    name: emergency leave policy
+    category: agent_tool_use
+    input: {user_message: "how do I get emergency leave?"}
+    expected:
+      expected_tool_calls: [knowledge_base]
+      answer_contains: ["supervisor approval"]
+    scoring:
+      - {type: tool_use, weight: 1.0}
+      - {type: planning, weight: 1.0}
+      - {type: step_efficiency, weight: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+    failure_labels: [tool_omission]
+
+  - test_id: ag_expense
+    name: meal expense limit
+    category: agent_tool_use
+    input: {user_message: "what is the daily meal expense limit?"}
+    expected:
+      expected_tool_calls: [knowledge_base]
+      answer_contains: ["75"]
+    scoring:
+      - {type: tool_use, weight: 1.0}
+      - {type: planning, weight: 1.0}
+      - {type: step_efficiency, weight: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+
+  - test_id: ag_pto
+    name: pto accrual
+    category: agent_tool_use
+    input: {user_message: "how fast does PTO accrue?"}
+    expected:
+      expected_tool_calls: [knowledge_base]
+      answer_contains: ["per month"]
+    scoring:
+      - {type: tool_use, weight: 1.0}
+      - {type: planning, weight: 1.0}
+      - {type: step_efficiency, weight: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+
+  - test_id: ag_parental
+    name: parental leave
+    category: agent_tool_use
+    input: {user_message: "how long is parental leave?"}
+    expected:
+      expected_tool_calls: [knowledge_base]
+      answer_contains: ["weeks"]
+    scoring:
+      - {type: tool_use, weight: 1.0}
+      - {type: planning, weight: 1.0}
+      - {type: step_efficiency, weight: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+
+  - test_id: ag_password
+    name: password policy
+    category: agent_tool_use
+    input: {user_message: "what are the password rules?"}
+    expected:
+      expected_tool_calls: [knowledge_base]
+      answer_contains: ["characters"]
+    scoring:
+      - {type: tool_use, weight: 1.0}
+      - {type: planning, weight: 1.0}
+      - {type: step_efficiency, weight: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+
+  - test_id: ag_retention
+    name: data retention
+    category: agent_tool_use
+    input: {user_message: "how long is data retained?"}
+    expected:
+      expected_tool_calls: [knowledge_base]
+      answer_contains: ["seven years"]
+    scoring:
+      - {type: tool_use, weight: 1.0}
+      - {type: planning, weight: 1.0}
+      - {type: step_efficiency, weight: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+
+  - test_id: ag_badge
+    name: lost badge
+    category: agent_tool_use
+    input: {user_message: "I lost my badge, what should I do?"}
+    expected:
+      expected_tool_calls: [knowledge_base]
+      answer_contains: ["report immediately"]
+    scoring:
+      - {type: tool_use, weight: 1.0}
+      - {type: planning, weight: 1.0}
+      - {type: step_efficiency, weight: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+
+  - test_id: ag_benefits
+    name: benefits enrollment
+    category: agent_tool_use
+    input: {user_message: "when is benefits enrollment?"}
+    expected:
+      expected_tool_calls: [knowledge_base]
+      answer_contains: ["November"]
+    scoring:
+      - {type: tool_use, weight: 1.0}
+      - {type: planning, weight: 1.0}
+      - {type: step_efficiency, weight: 1.0}
+      - {type: keyword_containment, weight: 1.0}
+
+  # The agent only has `knowledge_base`, but this case expects `calculator` — the agent uses
+  # the wrong tool, so tool_use should catch a tool_omission (a demonstrated failure).
+  - test_id: ag_calc_omission
+    name: expects calculator (agent lacks it)
+    category: agent_tool_use
+    risk_level: low
+    input: {user_message: "what is 18 percent of 250?"}
+    expected:
+      expected_tool_calls: [calculator]
+    scoring:
+      # Strict tool-use: the agent must call the expected tool (it calls knowledge_base
+      # instead), so this case fails on a tool_omission — the scorer earning its keep.
+      - {type: tool_use, weight: 1.0, pass_threshold: 1.0}
+      - {type: planning, weight: 1.0}
+      - {type: step_efficiency, weight: 1.0}
+    failure_labels: [tool_omission]
