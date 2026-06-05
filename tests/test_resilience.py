@@ -67,7 +67,7 @@ def test_eval_kwargs_full():
 
 # ---------------------------- offline fault-injection behavior ---------------------------- #
 #
-# Verified Inspect runtime behavior (exploration runs, 2025-06-05):
+# Verified Inspect runtime behavior (exploration runs, 2026-06-05):
 #
 # 1. A raising mockllm custom_outputs policy surfaces as a *sample* error: the sample's
 #    ``error`` field is populated and ``log.results`` is set to ``None``.
@@ -141,7 +141,7 @@ def test_no_retry_lets_a_transient_failure_surface(tmp_path):
 def test_fail_on_error_threshold_trips_above_rate(tmp_path):
     """Error rate 0.5 (2 of 4 samples fail) exceeds threshold 0.4 → run status is error."""
     dataset = _dataset(
-        {"ok1": "fine", "ok2": "fine", "bad1": "boom [boom]", "bad2": "boom [boom]"}
+        {"ok1": "fine one", "ok2": "fine two", "bad1": "boom one [boom]", "bad2": "boom two [boom]"}
     )
     log = _run(dataset, FlakyPolicy(), tmp_path, fail_on_error=0.4)
     assert log.status == "error"
@@ -151,7 +151,7 @@ def test_fail_on_error_threshold_trips_above_rate(tmp_path):
 def test_fail_on_error_threshold_tolerates_below_rate(tmp_path):
     """Error rate 0.5 (2 of 4 samples fail) is within threshold 0.6 → run status is success."""
     dataset = _dataset(
-        {"ok1": "fine", "ok2": "fine", "bad1": "boom [boom]", "bad2": "boom [boom]"}
+        {"ok1": "fine one", "ok2": "fine two", "bad1": "boom one [boom]", "bad2": "boom two [boom]"}
     )
     log = _run(dataset, FlakyPolicy(), tmp_path, fail_on_error=0.6)
     assert log.status == "success"
