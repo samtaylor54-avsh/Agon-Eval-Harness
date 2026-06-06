@@ -130,7 +130,9 @@ class ResilienceConfig(BaseModel):
     """Run-resilience knobs. Each field passes through to Inspect's eval()/GenerateConfig;
     Inspect (and LiteLLM) execute the retry/backoff/timeout — agon only wires and validates."""
 
-    model_config = ConfigDict(extra="forbid")
+    # validate_assignment so the field validators also fire on direct attribute assignment
+    # (the CLI applier sets fields one at a time, bypassing construction-time validation).
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
     max_retries: int = Field(default=5, ge=0)  # per-request retries (Inspect default is unlimited)
     request_timeout: int | None = Field(default=None, ge=1)  # whole-request timeout (s)
