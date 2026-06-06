@@ -16,6 +16,7 @@ from pathlib import Path
 
 from agon.scoring.base import ScoreOutcome, register
 
+# Simple process-lifetime cache: fine for a single eval run, not for hot-reloading a schema.
 _SCHEMA_CACHE: dict[str, str] = {}
 
 
@@ -52,6 +53,9 @@ def compare_sql(candidate: str, reference: str, schema_sql: str) -> tuple[bool, 
     except sqlite3.Error as exc:
         return (False, "sql_error", f"candidate query error: {exc}")
 
+    # Heuristic: "order by" anywhere in the reference (even a subquery) forces order-sensitive
+    # comparison. Correct for a top-level ORDER BY and a safe over-approximation elsewhere -- a
+    # false failure is preferable to a false pass for a teaching example.
     if "order by" in reference.lower():
         match = actual_rows == expected_rows
     else:
