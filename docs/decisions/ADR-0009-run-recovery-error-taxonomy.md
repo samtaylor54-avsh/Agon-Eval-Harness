@@ -50,3 +50,12 @@ limit and still scores the sample, the digest re-tags such scored-but-limited sa
 - Per-case timeouts do not apply to the native ReAct agent path (`agent_task`), which builds its
   own solver via `react_sut` and never receives `default_time_limit`. Acceptable for now; a future
   milestone can extend it if needed.
+- With `epochs > 1`, if a single epoch of a case hits a per-case `time_limit` while the flake
+  reducer still reduces the case to a pass, the digest currently re-tags that sample as a
+  `timeout` error (it surfaces any per-epoch limit). Per-case timeouts are intended for the
+  common `epochs = 1` path; reconciling per-epoch limits with the reduced outcome is left to a
+  future milestone.
+- `agon resume` cannot *loosen* a per-case `sample_time_limit`: the case's own value wins over
+  the run-level `--sample-time-limit` (by design, "per-case overrides the default"), so a case
+  that timed out under its own tight limit will time out again on resume unless the dataset's
+  per-case value is changed. The run-level default can still be loosened for cases that have none.

@@ -159,6 +159,8 @@ def sample_records(log: EvalLog) -> list[SampleRecord]:
     # Override scored records that also hit a limit (e.g. per-case time_limit fired inside
     # the solver but Inspect still ran the scorer). Without this, those samples appear as
     # ordinary failures rather than timeout errors.
+    # NOTE: this maps by raw sample id, so with epochs>1 a limit in any single epoch re-tags the
+    # reduced record. Acceptable for the common epochs=1 path; see ADR-0009 known limitations.
     limit_cats = _limit_categories(log)
     if limit_cats:
         records = [
