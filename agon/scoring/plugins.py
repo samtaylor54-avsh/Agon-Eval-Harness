@@ -26,7 +26,9 @@ class PluginLoadError(Exception):
 
 
 def _looks_like_file(spec: str) -> bool:
-    return spec.endswith(".py") or Path(spec).exists()
+    # is_file (not exists): a bare module name that collides with a CWD *directory*
+    # should still route to import, not be mistaken for a plugin file.
+    return spec.endswith(".py") or Path(spec).is_file()
 
 
 def _load_file(spec: str) -> None:
@@ -43,6 +45,8 @@ def _load_file(spec: str) -> None:
 
 
 def _load_module(spec: str) -> None:
+    # Intentional, persistent CWD-on-path for CLI plugin use (so a local module resolves);
+    # not intended for long-lived library use.
     cwd = str(Path.cwd())
     if cwd not in sys.path:
         sys.path.insert(0, cwd)
