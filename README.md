@@ -266,6 +266,11 @@ uv run agon trace <run_id> --backend console
 # 9. Run the offline OWASP adversarial suite (4 attacks caught, 4 controls pass).
 uv run python examples/adversarial_quickstart.py
 #    -> scripted vulnerable/resistant agent; OWASP scorecard via per-category reporting
+
+# 10. Run a brand-new-domain eval (text-to-SQL) with a custom scorer loaded via --plugin.
+uv run python examples/text_to_sql/run.py        # offline: 4/6 pass (equivalent SQL passes, wrong/malformed fail)
+uv run agon run --plugin examples/text_to_sql/sql_scorer.py examples/text_to_sql/dataset.yaml --display none
+#    -> custom `sql_result_match` scorer compares result rows, not SQL strings
 ```
 
 To evaluate a **real** system, point the SUT and judge at a provider via a run config
@@ -296,7 +301,7 @@ To evaluate a **real** system, point the SUT and judge at a provider via a run c
 
 ## Contributing
 
-Contributions, adversarial test cases, and documented failure modes are all welcome — a good failure report is as valuable here as a working feature. A `CONTRIBUTING.md` will accompany the Phase 1 release.
+Contributions, adversarial test cases, and documented failure modes are all welcome — a good failure report is as valuable here as a working feature. See **[CONTRIBUTING.md](CONTRIBUTING.md)** for dev setup and conventions, and **[docs/extending.md](docs/extending.md)** for how to add your own dataset, scorer, or SUT adapter. Start from the copy-me skeleton in [`templates/your-eval/`](templates/your-eval/).
 
 ---
 

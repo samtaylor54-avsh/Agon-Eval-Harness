@@ -30,6 +30,7 @@ tests under `tests/`, fixtures/examples under `examples/`. The offline path uses
 <20-minute reproducibility budget. Judge-based and semantic scorers are opt-in (real provider /
 `[semantic]` extra). When adding a scorer, register it on `agon.scoring.default_registry` and add
 boundary tests; when fixing a failure mode, add the case that catches it to a dataset.
+Custom scorers can also be loaded without editing the package via `agon run --plugin <module-or-.py>` (see `docs/extending.md`); a copy-me eval skeleton lives in `templates/your-eval/`.
 
 ## What This Project Is
 
