@@ -1,0 +1,84 @@
+# Text-to-SQL eval. The SUT answers a question with a SQL query; the custom
+# `sql_result_match` scorer runs it against examples/text_to_sql/schema.sql and
+# compares result rows. Run it with:
+#   uv run agon run --plugin examples/text_to_sql/sql_scorer.py examples/text_to_sql/dataset.yaml
+# or fully offline with a canned SUT:  uv run python examples/text_to_sql/run.py
+name: text_to_sql_suite
+test_cases:
+  - test_id: sql_001
+    name: names in engineering
+    category: text_to_sql
+    risk_level: low
+    input:
+      user_message: "List the names of everyone in the engineering department."
+    expected:
+      expected_answer: "SELECT name FROM employees WHERE dept = 'engineering'"
+    scoring:
+      - {type: sql_result_match, weight: 1.0, pass_threshold: 1.0, params: {schema: schema.sql}}
+    failure_labels: [sql_error, wrong_rows]
+    tags: [text_to_sql, filter]
+
+  - test_id: sql_002
+    name: total headcount
+    category: text_to_sql
+    risk_level: low
+    input:
+      user_message: "How many employees are there?"
+    expected:
+      expected_answer: "SELECT COUNT(*) FROM employees"
+    scoring:
+      - {type: sql_result_match, weight: 1.0, pass_threshold: 1.0, params: {schema: schema.sql}}
+    failure_labels: [sql_error, wrong_rows]
+    tags: [text_to_sql, aggregate]
+
+  - test_id: sql_003
+    name: average salary
+    category: text_to_sql
+    risk_level: low
+    input:
+      user_message: "What is the average salary?"
+    expected:
+      expected_answer: "SELECT AVG(salary) FROM employees"
+    scoring:
+      - {type: sql_result_match, weight: 1.0, pass_threshold: 1.0, params: {schema: schema.sql}}
+    failure_labels: [sql_error, wrong_rows]
+    tags: [text_to_sql, aggregate]
+
+  - test_id: sql_004
+    name: high earners
+    category: text_to_sql
+    risk_level: medium
+    input:
+      user_message: "Who earns more than 100000?"
+    expected:
+      expected_answer: "SELECT name FROM employees WHERE salary > 100000"
+    scoring:
+      - {type: sql_result_match, weight: 1.0, pass_threshold: 1.0, params: {schema: schema.sql}}
+    failure_labels: [sql_error, wrong_rows]
+    tags: [text_to_sql, filter]
+
+  - test_id: sql_005
+    name: names by salary desc
+    category: text_to_sql
+    risk_level: low
+    input:
+      user_message: "List employee names ordered by salary, highest first."
+    expected:
+      expected_answer: "SELECT name FROM employees ORDER BY salary DESC"
+    scoring:
+      - {type: sql_result_match, weight: 1.0, pass_threshold: 1.0, params: {schema: schema.sql}}
+    failure_labels: [sql_error, wrong_rows]
+    tags: [text_to_sql, ordering]
+
+  - test_id: sql_006
+    name: distinct departments
+    category: text_to_sql
+    risk_level: low
+    input:
+      user_message: "Which departments exist?"
+    expected:
+      expected_answer: "SELECT DISTINCT dept FROM employees"
+    scoring:
+      - {type: sql_result_match, weight: 1.0, pass_threshold: 1.0, params: {schema: schema.sql}}
+    failure_labels: [sql_error, wrong_rows]
+    tags: [text_to_sql, distinct]

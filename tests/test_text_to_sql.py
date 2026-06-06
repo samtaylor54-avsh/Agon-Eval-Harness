@@ -72,3 +72,22 @@ async def test_scorer_wraps_compare_into_outcome():
     out = await scorer.score(case, resp, case.scoring[0])
     assert out.normalized_score == 1.0
     assert out.labels == []
+
+
+def test_example_run_yields_mixed_report(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)  # keep logs/reports out of the repo
+    run_mod = _load_module("t2s_run_under_test", "run.py")
+
+    from agon.reporting import generate_reports
+    from agon.schemas import RunConfig, SUTConfig
+    from agon.task import run_eval
+
+    dataset = run_mod.load_dataset(str(EXAMPLE_DIR / "dataset.yaml"))
+    config = RunConfig(system_version="t", sut=SUTConfig(adapter="callable"))
+    log = run_eval(dataset, config, callable_fn=run_mod.stub_sut, display="none")
+    result = generate_reports(log, config=config, out_dir=str(tmp_path / "reports"))
+    digest = result["digest"]
+    passed = sum(r.passed for r in digest.records)
+    # sql_001/002/003/005 pass; sql_004 wrong_rows; sql_006 sql_error.
+    assert len(digest.records) == 6
+    assert passed == 4
