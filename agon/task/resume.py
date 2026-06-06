@@ -41,6 +41,11 @@ def cases_from_log(log: EvalLog, samples: list[EvalSample]) -> AgonDataset:
             continue
         seen.add(case.test_id)
         cases.append(case)
+    if not cases:
+        raise ValueError(
+            f"cases_from_log: no AgonCase metadata found in {len(samples)} sample(s); "
+            f"the original run must have used case_to_sample (metadata key {METADATA_CASE_KEY!r})."
+        )
     meta = log.eval.metadata or {}
     version = str(meta.get("dataset_version", "")) or "resume"
     return AgonDataset(name=f"{log.eval.task}__resume", dataset_version=version, test_cases=cases)
@@ -49,8 +54,11 @@ def cases_from_log(log: EvalLog, samples: list[EvalSample]) -> AgonDataset:
 def merge_digests(prior: RunDigest, rerun: RunDigest) -> RunDigest:
     """Merge a prior run's records with a re-run, preferring the re-run per test_id.
 
-    Aggregates are recomputed from the merged record set. Cost reflects the re-run only
-    (the work resume actually performed).
+    Aggregates are recomputed from the merged record set. Metadata sourcing:
+    - run_id, created: from the rerun (the resume operation is the canonical identity)
+    - task, model, system_version, dataset_version: from the prior run (config unchanged)
+    - cost: rerun only -- reflects the work resume performed; callers needing a cumulative
+      total should sum prior.cost + rerun.cost themselves.
     """
     by_id: dict[str, SampleRecord] = {r.test_id: r for r in prior.records}
     for r in rerun.records:

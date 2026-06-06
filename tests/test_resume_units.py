@@ -70,6 +70,8 @@ def test_merge_digests_prefers_rerun_and_recomputes():
     assert merged.overall_pass_rate == 1.0
     assert merged.error_count == 0
     assert merged.error_count_by_category == {}
+    assert merged.n_cases == 2  # prior-only "good" survived the merge, not just rerun's "bad"
+    assert "good" in merged.record_map()
 
 
 def test_select_incomplete_handles_score_without_metadata():
@@ -82,3 +84,22 @@ def test_select_incomplete_handles_score_without_metadata():
     log = SimpleNamespace(samples=[sample])
     # Clean pass with no metadata -> not incomplete, and no AttributeError.
     assert select_incomplete(log) == []
+
+
+def test_select_incomplete_picks_limited_sample():
+    from agon.analysis.logs import AGON_SCORER
+
+    # A sample that hit a limit must be selected even if it has a (zero) score.
+    sample = SimpleNamespace(
+        id="s1", error=None, limit=object(), scores={AGON_SCORER: Score(value=0.0)}
+    )
+    assert select_incomplete(SimpleNamespace(samples=[sample])) == [sample]
+
+
+def test_select_incomplete_picks_scorer_error():
+    from agon.analysis.logs import AGON_SCORER
+
+    # A scored sample whose scorer metadata says errored=True must be selected.
+    score = Score(value=0.0, metadata={"errored": True})
+    sample = SimpleNamespace(id="s1", error=None, limit=None, scores={AGON_SCORER: score})
+    assert select_incomplete(SimpleNamespace(samples=[sample])) == [sample]
