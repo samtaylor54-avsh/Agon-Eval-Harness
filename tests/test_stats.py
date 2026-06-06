@@ -69,3 +69,12 @@ def test_small_sample():
     assert small_sample(10) is True
     assert small_sample(30) is False
     assert small_sample(100) is False
+
+
+def test_proportion_rejects_out_of_range_counts():
+    with pytest.raises(ValueError):
+        wilson_interval(11, 10)
+    with pytest.raises(ValueError):
+        wilson_interval(-1, 10)
+    with pytest.raises(ValueError):
+        two_proportion_test(11, 10, 5, 10)

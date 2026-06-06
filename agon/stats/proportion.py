@@ -15,10 +15,17 @@ def small_sample(n: int, min_n: int = SMALL_SAMPLE_N) -> bool:
     return n < min_n
 
 
+def _check_count(successes: int, n: int) -> None:
+    """Guard a successes/total pair so callers get a clear error, not a math domain error."""
+    if not 0 <= successes <= n:
+        raise ValueError(f"successes must be in [0, {n}], got {successes}")
+
+
 def wilson_interval(successes: int, n: int, confidence: float = 0.95) -> Interval:
     """Wilson score interval for a binomial proportion (stable at small n and at 0%/100%)."""
     if n <= 0:
         return Interval(point=0.0, low=0.0, high=1.0, confidence=confidence)
+    _check_count(successes, n)
     z = z_critical(confidence)
     p = successes / n
     denom = 1.0 + z * z / n
@@ -40,6 +47,8 @@ def two_proportion_test(
         return ProportionTest(
             diff=0.0, z=0.0, p_value=1.0, significant=False, confidence=confidence
         )
+    _check_count(s1, n1)
+    _check_count(s2, n2)
     p1, p2 = s1 / n1, s2 / n2
     pool = (s1 + s2) / (n1 + n2)
     se = math.sqrt(pool * (1 - pool) * (1 / n1 + 1 / n2))
