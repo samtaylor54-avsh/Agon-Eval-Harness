@@ -159,8 +159,8 @@ def run(
     unknown = _validate_scorers(ds)
     if unknown:
         typer.echo(
-            f"[abort] unknown scorer_type(s): {unknown}; "
-            f"registered: {default_registry.keys()}; "
+            f"[abort] unknown scorer_type(s): {', '.join(unknown)}; "
+            f"registered: {', '.join(default_registry.keys())}; "
             f"did you forget --plugin <module-or-file>?",
             err=True,
         )
