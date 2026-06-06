@@ -45,6 +45,7 @@ def test_solver_error_is_visible_and_categorized(tmp_path):
     assert {r.test_id for r in d.records} == {"good", "bad"}  # "bad" no longer vanishes
     bad = d.record_map()["bad"]
     assert bad.errored is True
+    # "connection refused" matches the NETWORK classifier's \bconnect\b marker
     assert bad.error_category == "network"
     assert d.error_count == 1
     assert d.error_count_by_category == {"network": 1}

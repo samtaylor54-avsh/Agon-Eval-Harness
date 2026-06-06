@@ -115,6 +115,8 @@ def _errored_samples(log: EvalLog, scored_ids: set[str]) -> list[SampleRecord]:
         if sid in scored_ids or sid in seen:
             continue
         category = classify_sample(sample)
+        # A sample with no score, no error, and no limit is not an error to surface here;
+        # such samples are intentionally absent from the digest (pre-existing behavior).
         if category is None:
             continue
         seen.add(sid)
