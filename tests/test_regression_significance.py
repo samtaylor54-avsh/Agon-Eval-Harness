@@ -5,10 +5,10 @@ from agon.analysis.regression import compare_digests
 from agon.schemas import ProportionTest
 
 
-def _digest(run_id, passed_flags):
+def _digest(run_id, passed_flags, prefix="t"):
     records = [
         SampleRecord(
-            test_id=f"t{i}",
+            test_id=f"{prefix}{i}",
             passed=p,
             composite_score=1.0 if p else 0.0,
             category="c",
@@ -44,9 +44,22 @@ def test_regression_report_has_pass_rate_test():
 
 
 def test_regression_significant_drop_flagged_in_test_only():
-    # Large suites, a clearly significant drop, but the gate logic is the new-failure rule.
+    # Large suites, a clearly significant drop. The gate also fires here (15 new common
+    # failures); this test pins that the significance/small-sample fields populate on a large run.
     base = _digest("base", [True] * 95 + [False] * 5)
     cur = _digest("cur", [True] * 80 + [False] * 20)
     report = compare_digests(cur, base)
     assert report.pass_rate_test.significant is True
     assert report.small_sample is False
+
+
+def test_significant_aggregate_drop_with_disjoint_ids_does_not_trip_gate():
+    # Disjoint test_ids: there are no *common* cases that newly failed, so the gate stays
+    # silent -- yet the aggregate pass-rate test sees a significant drop. This is exactly the
+    # information the test adds on top of the (deliberately unchanged) new-failure gate.
+    base = _digest("base", [True] * 100, prefix="b")
+    cur = _digest("cur", [True] * 80 + [False] * 20, prefix="u")
+    report = compare_digests(cur, base)
+    assert report.new_failures == []  # no shared ids -> nothing the gate can catch
+    assert report.regression_detected is False  # gate silent...
+    assert report.pass_rate_test.significant is True  # ...but the aggregate drop is real
