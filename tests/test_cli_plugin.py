@@ -61,8 +61,8 @@ def test_run_with_plugin_resolves_scorer(tmp_path):
              "--display", "none"],
         )
         # Scorer resolved -> no abort (exit 2). dummy scorer passes -> not exit 2 either way.
-        assert result.exit_code != 2, result.stdout
-        assert "loaded plugin scorers: dummy_plugin_scorer" in result.stdout
+        assert result.exit_code != 2, result.output
+        assert "loaded plugin scorers: dummy_plugin_scorer" in result.output
     finally:
         _cleanup()
 
@@ -77,6 +77,6 @@ def test_run_without_plugin_aborts_with_hint(tmp_path):
          "--report-dir", str(tmp_path / "reports"),
          "--display", "none"],
     )
-    assert result.exit_code == 2, result.stdout
-    assert "dummy_plugin_scorer" in result.stdout
-    assert "--plugin" in result.stdout
+    assert result.exit_code == 2, result.output
+    assert "dummy_plugin_scorer" in result.output
+    assert "--plugin" in result.output

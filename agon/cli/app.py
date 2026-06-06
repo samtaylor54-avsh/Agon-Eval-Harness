@@ -161,7 +161,8 @@ def run(
         typer.echo(
             f"[abort] unknown scorer_type(s): {unknown}; "
             f"registered: {default_registry.keys()}; "
-            f"did you forget --plugin <module-or-file>?"
+            f"did you forget --plugin <module-or-file>?",
+            err=True,
         )
         raise typer.Exit(ABORT)
 
