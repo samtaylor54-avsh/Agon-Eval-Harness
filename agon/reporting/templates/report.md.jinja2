@@ -7,10 +7,13 @@
 | Model | {{ d.model or "—" }} |
 | Dataset version | `{{ d.dataset_version[:12] or "—" }}` |
 | Created | {{ d.created or "—" }} |
-| **Overall pass rate** | **{{ "%.1f"|format(d.overall_pass_rate * 100) }}%** ({{ passed }}/{{ total }}) |
+| **Overall pass rate** | **{{ "%.1f"|format(d.overall_pass_rate * 100) }}%** [{{ "%.1f"|format(d.overall_pass_ci.low * 100) }}%, {{ "%.1f"|format(d.overall_pass_ci.high * 100) }}%] ({{ passed }}/{{ total }}) |
 | Errors | {{ d.error_count }} |
 | **Recommendation** | **{{ recommendation }}** |
 
+{% if d.small_sample %}
+> Small sample (n={{ d.n_cases }} < 30): treat pass rates and intervals with caution.
+{% endif %}
 ## Pass rate by category
 {% for cat, rate in d.pass_rate_by_category.items() %}- {{ cat }}: {{ "%.1f"|format(rate * 100) }}%
 {% endfor %}
