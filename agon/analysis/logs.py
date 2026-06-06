@@ -14,6 +14,7 @@ from typing import Any
 from inspect_ai.log import EvalLog, list_eval_logs, read_eval_log
 from pydantic import BaseModel, ConfigDict, Field
 
+from agon.analysis.errors import ErrorCategory, classify_sample
 from agon.cost import CostSummary, summarize_cost
 from agon.schemas import Interval
 from agon.stats import small_sample as is_small_sample
@@ -34,6 +35,7 @@ class SampleRecord(BaseModel):
     detected_failure_labels: list[str] = Field(default_factory=list)
     retrieval_scores: dict[str, float] = Field(default_factory=dict)
     errored: bool = False
+    error_category: str | None = None
 
 
 class RunDigest(BaseModel):
@@ -51,6 +53,7 @@ class RunDigest(BaseModel):
     pass_rate_by_risk: dict[str, float]
     top_failure_labels: list[tuple[str, int]]
     error_count: int
+    error_count_by_category: dict[str, int] = Field(default_factory=dict)
     cost: CostSummary = Field(default_factory=CostSummary)
     n_cases: int = 0
     overall_pass_ci: Interval = Field(
@@ -83,22 +86,58 @@ def _reduced_samples(log: EvalLog) -> list[tuple[str, Any, dict[str, Any]]]:
     return out
 
 
-def sample_records(log: EvalLog) -> list[SampleRecord]:
+def _record_from_score(test_id: str, value: Any, meta: dict[str, Any]) -> SampleRecord:
+    """Build a SampleRecord from a scored sample's (value, scorer-metadata)."""
+    passed = float(value) >= 0.5
+    scorer_errored = bool(meta.get("errored", False))
+    return SampleRecord(
+        test_id=test_id,
+        passed=passed,
+        composite_score=float(meta.get("composite_score", 1.0 if passed else 0.0)),
+        category=str(meta.get("category", "uncategorized")),
+        risk_level=str(meta.get("risk_level", "medium")),
+        detected_failure_labels=list(meta.get("detected_failure_labels", [])),
+        retrieval_scores=dict(meta.get("retrieval_scores", {})),
+        errored=scorer_errored,
+        error_category=ErrorCategory.SCORER.value if scorer_errored else None,
+    )
+
+
+def _errored_samples(log: EvalLog, scored_ids: set[str]) -> list[SampleRecord]:
+    """Promote samples that errored/limited *before* scoring (no AGON_SCORER score, so absent
+    from the scored records) into visible, categorized records. Without this, model/SUT/timeout
+    errors silently vanish from the digest.
+    """
     records: list[SampleRecord] = []
-    for test_id, value, meta in _reduced_samples(log):
-        passed = float(value) >= 0.5
+    seen: set[str] = set()
+    for sample in log.samples or []:
+        sid = str(sample.id)
+        if sid in scored_ids or sid in seen:
+            continue
+        category = classify_sample(sample)
+        if category is None:
+            continue
+        seen.add(sid)
+        meta = sample.metadata or {}
         records.append(
             SampleRecord(
-                test_id=test_id,
-                passed=passed,
-                composite_score=float(meta.get("composite_score", 1.0 if passed else 0.0)),
+                test_id=sid,
+                passed=False,
+                composite_score=0.0,
                 category=str(meta.get("category", "uncategorized")),
                 risk_level=str(meta.get("risk_level", "medium")),
-                detected_failure_labels=list(meta.get("detected_failure_labels", [])),
-                retrieval_scores=dict(meta.get("retrieval_scores", {})),
-                errored=bool(meta.get("errored", False)),
+                errored=True,
+                error_category=category.value,
             )
         )
+    return records
+
+
+def sample_records(log: EvalLog) -> list[SampleRecord]:
+    scored = list(_reduced_samples(log))
+    records = [_record_from_score(tid, value, meta) for tid, value, meta in scored]
+    scored_ids = {tid for tid, _v, _m in scored}
+    records.extend(_errored_samples(log, scored_ids))
     return records
 
 
@@ -106,14 +145,25 @@ def _rate(passed: int, total: int) -> float:
     return passed / total if total else 0.0
 
 
-def digest(log: EvalLog) -> RunDigest:
-    records = sample_records(log)
+def build_digest(
+    records: list[SampleRecord],
+    *,
+    run_id: str,
+    task: str,
+    model: str | None,
+    system_version: str,
+    dataset_version: str,
+    created: str,
+    cost: CostSummary,
+) -> RunDigest:
+    """Compute a RunDigest from a record set (shared by digest() and resume merge)."""
     total = len(records)
     passed = sum(1 for r in records if r.passed)
 
     cat_pass: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     risk_pass: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     label_counter: Counter[str] = Counter()
+    error_by_cat: Counter[str] = Counter()
     for r in records:
         cat_pass[r.category][0] += int(r.passed)
         cat_pass[r.category][1] += 1
@@ -121,9 +171,36 @@ def digest(log: EvalLog) -> RunDigest:
         risk_pass[r.risk_level][1] += 1
         if not r.passed:
             label_counter.update(r.detected_failure_labels)
+        if r.error_category:
+            error_by_cat[r.error_category] += 1
 
     overall_pass_ci = wilson_interval(passed, total)
     pass_ci_by_category = {k: wilson_interval(v[0], v[1]) for k, v in sorted(cat_pass.items())}
+
+    return RunDigest(
+        run_id=run_id,
+        task=task,
+        model=model,
+        system_version=system_version,
+        dataset_version=dataset_version,
+        created=created,
+        records=records,
+        overall_pass_rate=_rate(passed, total),
+        pass_rate_by_category={k: _rate(v[0], v[1]) for k, v in sorted(cat_pass.items())},
+        pass_rate_by_risk={k: _rate(v[0], v[1]) for k, v in sorted(risk_pass.items())},
+        top_failure_labels=label_counter.most_common(),
+        error_count=sum(1 for r in records if r.errored),
+        error_count_by_category=dict(error_by_cat),
+        cost=cost,
+        n_cases=total,
+        overall_pass_ci=overall_pass_ci,
+        pass_ci_by_category=pass_ci_by_category,
+        small_sample=is_small_sample(total),
+    )
+
+
+def digest(log: EvalLog) -> RunDigest:
+    records = sample_records(log)
 
     stats = getattr(log, "stats", None)
     model_usage = getattr(stats, "model_usage", {}) or {}
@@ -136,24 +213,15 @@ def digest(log: EvalLog) -> RunDigest:
     cost = summarize_cost(usage_by_model)
 
     meta = log.eval.metadata or {}
-    return RunDigest(
+    return build_digest(
+        records,
         run_id=log.eval.run_id,
         task=log.eval.task,
         model=log.eval.model,
         system_version=str(meta.get("system_version", "unversioned")),
         dataset_version=str(meta.get("dataset_version", "")),
         created=log.eval.created or "",
-        records=records,
-        overall_pass_rate=_rate(passed, total),
-        pass_rate_by_category={k: _rate(v[0], v[1]) for k, v in sorted(cat_pass.items())},
-        pass_rate_by_risk={k: _rate(v[0], v[1]) for k, v in sorted(risk_pass.items())},
-        top_failure_labels=label_counter.most_common(),
-        error_count=sum(1 for r in records if r.errored),
         cost=cost,
-        n_cases=total,
-        overall_pass_ci=overall_pass_ci,
-        pass_ci_by_category=pass_ci_by_category,
-        small_sample=is_small_sample(total),
     )
 
 
