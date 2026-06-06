@@ -61,7 +61,7 @@ def test_eval_kwargs_full():
     assert kwargs["timeout"] == 120
     assert kwargs["attempt_timeout"] == 60
     assert kwargs["retry_on_error"] == 1
-    assert kwargs["time_limit"] == 30
+    assert "time_limit" not in kwargs  # sample_time_limit is solver-enforced (M8)
     assert kwargs["fail_on_error"] == 0.25
 
 

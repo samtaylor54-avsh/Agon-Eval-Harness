@@ -13,10 +13,13 @@ agnostic to how the response was produced.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from contextlib import AbstractContextManager, nullcontext
 
 from inspect_ai.model import ModelOutput
 from inspect_ai.solver import Generate, Solver, TaskState, solver
+from inspect_ai.util import time_limit
 
+from agon.dataset import METADATA_CASE_KEY
 from agon.schemas import SUTConfig
 from agon.sut.contract import (
     SUT_RESPONSE_KEY,
@@ -46,12 +49,23 @@ def _attach(state: TaskState, response: SUTResponse) -> None:
     state.metadata[SUT_RESPONSE_KEY] = response.model_dump(mode="json")
 
 
+def _time_limit_ctx(state: TaskState, default_time_limit: float | None) -> AbstractContextManager:
+    """Per-sample wall-clock guard: the case's override wins, else the run-level default.
+
+    A breach raises inspect's LimitExceededError, which surfaces as sample.limit(type="time").
+    """
+    case = (state.metadata or {}).get(METADATA_CASE_KEY) or {}
+    effective = case.get("sample_time_limit") or default_time_limit
+    return time_limit(effective) if effective else nullcontext()
+
+
 @solver
-def agon_generate_solver() -> Solver:
+def agon_generate_solver(default_time_limit: float | None = None) -> Solver:
     """Default solver: generate with the configured model, then normalize the output."""
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
-        state = await generate(state)
+        with _time_limit_ctx(state, default_time_limit):
+            state = await generate(state)
         usage = getattr(state.output, "usage", None)
         token_usage = (
             TokenUsage(
@@ -75,12 +89,13 @@ def agon_generate_solver() -> Solver:
 
 
 @solver
-def callable_solver(fn: SUTCallable) -> Solver:
+def callable_solver(fn: SUTCallable, default_time_limit: float | None = None) -> Solver:
     """Wrap an in-process async callable as the SUT."""
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         request = _build_request(state)
-        response = await fn(request)
+        with _time_limit_ctx(state, default_time_limit):
+            response = await fn(request)
         if not response.trace_id:
             response = response.model_copy(update={"trace_id": request.session_id})
         state.output = ModelOutput.from_content(model="callable", content=response.final_answer)
@@ -91,7 +106,7 @@ def callable_solver(fn: SUTCallable) -> Solver:
 
 
 @solver
-def http_solver(config: SUTConfig) -> Solver:
+def http_solver(config: SUTConfig, default_time_limit: float | None = None) -> Solver:
     """POST the normalized request to an external service and field-map the response."""
 
     if not config.endpoint_url:
@@ -101,14 +116,15 @@ def http_solver(config: SUTConfig) -> Solver:
         import httpx  # transitive dep via inspect-ai; imported lazily (opt-in path)
 
         request = _build_request(state)
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(
-                config.endpoint_url,
-                json=request.model_dump(),
-                headers=config.headers,
-            )
-            resp.raise_for_status()
-            payload = resp.json()
+        with _time_limit_ctx(state, default_time_limit):
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(
+                    config.endpoint_url,
+                    json=request.model_dump(),
+                    headers=config.headers,
+                )
+                resp.raise_for_status()
+                payload = resp.json()
         response = map_http_response(payload, config.field_map)
         if not response.trace_id:
             response = response.model_copy(update={"trace_id": request.session_id})
@@ -119,17 +135,22 @@ def http_solver(config: SUTConfig) -> Solver:
     return solve
 
 
-def build_solver(config: SUTConfig, *, callable_fn: SUTCallable | None = None) -> Solver:
+def build_solver(
+    config: SUTConfig,
+    *,
+    callable_fn: SUTCallable | None = None,
+    default_time_limit: float | None = None,
+) -> Solver:
     """Construct the solver for a given SUT configuration."""
     adapter = config.adapter
     if adapter in ("mockllm", "litellm"):
-        return agon_generate_solver()
+        return agon_generate_solver(default_time_limit)
     if adapter == "callable":
         if callable_fn is None:
             raise ValueError("callable adapter requires a callable_fn")
-        return callable_solver(callable_fn)
+        return callable_solver(callable_fn, default_time_limit)
     if adapter == "http":
-        return http_solver(config)
+        return http_solver(config, default_time_limit)
     raise ValueError(f"unknown SUT adapter: {adapter!r}")
 
 

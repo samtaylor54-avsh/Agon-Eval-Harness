@@ -14,7 +14,7 @@ from typing import Any
 from inspect_ai.log import EvalLog, list_eval_logs, read_eval_log
 from pydantic import BaseModel, ConfigDict, Field
 
-from agon.analysis.errors import ErrorCategory, classify_sample
+from agon.analysis.errors import ErrorCategory, classify_limit_type, classify_sample
 from agon.cost import CostSummary, summarize_cost
 from agon.schemas import Interval
 from agon.stats import small_sample as is_small_sample
@@ -135,11 +135,38 @@ def _errored_samples(log: EvalLog, scored_ids: set[str]) -> list[SampleRecord]:
     return records
 
 
+def _limit_categories(log: EvalLog) -> dict[str, ErrorCategory]:
+    """Build a map of sample_id -> ErrorCategory for samples that hit a limit.
+
+    Used to override scored records where the solver was aborted mid-run (e.g. a per-case
+    time_limit fires inside the solver, Inspect catches the LimitExceededError and still
+    calls the scorer, so the sample ends up in scored_ids with a score of 0 but no
+    errored flag in scorer metadata).
+    """
+    out: dict[str, ErrorCategory] = {}
+    for sample in log.samples or []:
+        if getattr(sample, "limit", None) is not None:
+            sid = str(sample.id)
+            out[sid] = classify_limit_type(getattr(sample.limit, "type", "") or "")
+    return out
+
+
 def sample_records(log: EvalLog) -> list[SampleRecord]:
     scored = list(_reduced_samples(log))
     records = [_record_from_score(tid, value, meta) for tid, value, meta in scored]
     scored_ids = {tid for tid, _v, _m in scored}
     records.extend(_errored_samples(log, scored_ids))
+    # Override scored records that also hit a limit (e.g. per-case time_limit fired inside
+    # the solver but Inspect still ran the scorer). Without this, those samples appear as
+    # ordinary failures rather than timeout errors.
+    limit_cats = _limit_categories(log)
+    if limit_cats:
+        records = [
+            r.model_copy(update={"errored": True, "error_category": limit_cats[r.test_id].value})
+            if r.test_id in limit_cats
+            else r
+            for r in records
+        ]
     return records
 
 
