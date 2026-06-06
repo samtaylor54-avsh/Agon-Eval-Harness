@@ -204,6 +204,9 @@ def resume(
     report_dir: str = typer.Option(None, "--report-dir"),
     display: str = typer.Option("plain", "--display", help="Inspect display: plain|rich|none"),
     latest: bool = typer.Option(False, "--latest", help="Resume the most recent run"),
+    plugin: list[str] = typer.Option(  # noqa: B008
+        [], "--plugin", "-p", help="Import a scorer module (dotted name or .py path) before running"
+    ),
     max_retries: int = typer.Option(None, "--max-retries", help="Per-request retry count"),
     request_timeout: int = typer.Option(
         None, "--request-timeout", help="Whole-request timeout (s)"
@@ -242,6 +245,16 @@ def resume(
         typer.echo(f"[abort] invalid resilience flag: {exc}", err=True)
         raise typer.Exit(ABORT) from exc
 
+    try:
+        loaded = load_plugins(plugin)
+    except PluginLoadError as exc:
+        typer.echo(f"[abort] {exc}", err=True)
+        raise typer.Exit(ABORT) from exc
+    if loaded:
+        typer.echo(f"loaded plugin scorers: {', '.join(loaded)}")
+
+    if latest and run_id:
+        typer.echo("[warn] both run_id and --latest given; using latest", err=True)
     target = None if latest else run_id
     try:
         result = resume_run(cfg, target, display=display)

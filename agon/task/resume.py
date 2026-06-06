@@ -95,7 +95,7 @@ def resume_run(
     *,
     callable_fn: SUTCallable | None = None,
     display: str = "none",
-) -> dict:
+) -> dict[str, object]:
     """Re-run a prior run's incomplete cases and write a merged report.
 
     ``run_id=None`` resumes the most recent run in ``cfg.log_dir``. Returns a dict with
@@ -113,6 +113,8 @@ def resume_run(
             pass_threshold=cfg.pass_threshold,
             investigate_threshold=cfg.investigate_threshold,
         )
+        # Nothing to recover: return the prior digest unchanged and write no new report files
+        # (re-resuming a clean run should not churn the existing report on disk).
         return {
             "resumed": 0,
             "digest": prior_digest,

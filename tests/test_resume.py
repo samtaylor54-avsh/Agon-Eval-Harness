@@ -68,3 +68,14 @@ def test_resume_nothing_to_resume(tmp_path):
     run_eval(_ds(), cfg, callable_fn=_healthy, display="none")  # all complete
     result = resume_run(cfg, None, callable_fn=_healthy, display="none")
     assert result["resumed"] == 0
+
+
+def test_resume_still_failing_stays_errored(tmp_path):
+    cfg = _cfg(tmp_path)
+    run_eval(_ds(), cfg, callable_fn=_failing, display="none")
+    # Resume with the SAME failing SUT: the bad case errors again, not recovered.
+    result = resume_run(cfg, None, callable_fn=_failing, display="none")
+    assert result["resumed"] == 1
+    merged = result["digest"]
+    assert merged.record_map()["bad"].errored is True
+    assert merged.error_count == 1
