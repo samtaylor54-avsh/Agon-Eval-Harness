@@ -57,3 +57,15 @@ def test_global_default_applies_without_per_case_override(tmp_path):
     )
     log = run_eval(ds, cfg, callable_fn=_slow_fn, display="none")
     assert digest(log).record_map()["slow"].error_category == "timeout"
+
+
+def test_per_case_limit_overrides_run_default(tmp_path):
+    """A case-level limit=1 fires even when the run-level default=30."""
+    ds = AgonDataset(name="t", dataset_version="v0", test_cases=[_case("slow", "hi", time_limit=1)])
+    cfg = RunConfig(
+        log_dir=str(tmp_path),
+        sut=SUTConfig(adapter="callable"),
+        resilience=ResilienceConfig(sample_time_limit=30),
+    )
+    log = run_eval(ds, cfg, callable_fn=_slow_fn, display="none")
+    assert digest(log).record_map()["slow"].error_category == "timeout"

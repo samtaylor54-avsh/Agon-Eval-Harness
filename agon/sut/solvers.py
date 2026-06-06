@@ -49,7 +49,9 @@ def _attach(state: TaskState, response: SUTResponse) -> None:
     state.metadata[SUT_RESPONSE_KEY] = response.model_dump(mode="json")
 
 
-def _time_limit_ctx(state: TaskState, default_time_limit: float | None) -> AbstractContextManager:
+def _time_limit_ctx(
+    state: TaskState, default_time_limit: float | None
+) -> AbstractContextManager[None]:
     """Per-sample wall-clock guard: the case's override wins, else the run-level default.
 
     A breach raises inspect's LimitExceededError, which surfaces as sample.limit(type="time").
@@ -116,8 +118,8 @@ def http_solver(config: SUTConfig, default_time_limit: float | None = None) -> S
         import httpx  # transitive dep via inspect-ai; imported lazily (opt-in path)
 
         request = _build_request(state)
-        with _time_limit_ctx(state, default_time_limit):
-            async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            with _time_limit_ctx(state, default_time_limit):
                 resp = await client.post(
                     config.endpoint_url,
                     json=request.model_dump(),

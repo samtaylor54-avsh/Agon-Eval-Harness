@@ -162,7 +162,13 @@ def sample_records(log: EvalLog) -> list[SampleRecord]:
     limit_cats = _limit_categories(log)
     if limit_cats:
         records = [
-            r.model_copy(update={"errored": True, "error_category": limit_cats[r.test_id].value})
+            r.model_copy(
+                update={
+                    "errored": True,
+                    "passed": False,
+                    "error_category": limit_cats[r.test_id].value,
+                }
+            )
             if r.test_id in limit_cats
             else r
             for r in records
