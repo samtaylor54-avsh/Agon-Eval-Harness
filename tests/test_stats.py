@@ -78,3 +78,26 @@ def test_proportion_rejects_out_of_range_counts():
         wilson_interval(-1, 10)
     with pytest.raises(ValueError):
         two_proportion_test(11, 10, 5, 10)
+
+
+from agon.stats import kappa_interval  # noqa: E402
+
+
+def test_kappa_interval_textbook():
+    iv = kappa_interval(0.85, 0.5, 25)
+    assert iv.point == pytest.approx(0.70, abs=1e-9)
+    assert iv.low == pytest.approx(0.4201, abs=1e-3)
+    assert iv.high == pytest.approx(0.9799, abs=1e-3)
+
+
+def test_kappa_interval_degenerate():
+    perfect = kappa_interval(1.0, 1.0, 10)  # pe >= 1 -> degenerate perfect agreement
+    assert perfect.point == 1.0 and perfect.low == 1.0 and perfect.high == 1.0
+    empty = kappa_interval(0.5, 0.5, 0)  # n = 0
+    assert empty.low == empty.high == empty.point
+
+
+def test_kappa_interval_clamps():
+    # Wide SE on a high kappa must clamp the upper bound at 1.0.
+    iv = kappa_interval(0.95, 0.5, 5)
+    assert iv.high <= 1.0
