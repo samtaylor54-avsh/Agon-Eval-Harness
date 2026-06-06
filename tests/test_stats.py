@@ -98,6 +98,6 @@ def test_kappa_interval_degenerate():
 
 
 def test_kappa_interval_clamps():
-    # Wide SE on a high kappa must clamp the upper bound at 1.0.
+    # Wide SE on a high kappa pushes the raw upper bound past 1.0; assert the clamp fired.
     iv = kappa_interval(0.95, 0.5, 5)
-    assert iv.high <= 1.0
+    assert iv.high == pytest.approx(1.0)

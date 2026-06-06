@@ -13,11 +13,12 @@ def kappa_interval(po: float, pe: float, n: int, confidence: float = 0.95) -> In
 
     ``po`` = observed agreement, ``pe`` = chance agreement, ``n`` = number of items.
     ``kappa = (po - pe) / (1 - pe)``; ``SE = sqrt(po(1-po)) / ((1-pe) sqrt(n))``. The interval
-    is clamped to ``[-1, 1]``. Degenerate inputs (``n <= 0`` or ``pe >= 1``) return a
-    zero-width interval at the degenerate kappa.
+    is clamped to ``[-1, 1]``. Degenerate inputs return a zero-width interval at a sentinel
+    kappa: ``1.0`` when ``pe >= 1`` (perfect chance agreement), else ``0.0`` when ``n <= 0``
+    (no sample to analyse) -- in neither case is a real CI meaningful.
     """
     if n <= 0 or pe >= 1.0:
-        k = 1.0 if pe >= 1.0 else 0.0
+        k = 1.0 if pe >= 1.0 else 0.0  # sentinel, not a computed kappa
         return Interval(point=k, low=k, high=k, confidence=confidence)
     kappa = (po - pe) / (1.0 - pe)
     z = z_critical(confidence)
