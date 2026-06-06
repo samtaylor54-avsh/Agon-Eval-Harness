@@ -226,6 +226,29 @@ class ReviewRecord(BaseModel):
     timestamp: str  # ISO 8601 UTC
 
 
+class Interval(BaseModel):
+    """A point estimate with a confidence interval (e.g. a Wilson pass-rate interval)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    point: float
+    low: float
+    high: float
+    confidence: float = 0.95
+
+
+class ProportionTest(BaseModel):
+    """Result of a two-proportion z-test (e.g. current vs. baseline pass rate)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    diff: float  # p1 - p2 (e.g. current - baseline)
+    z: float
+    p_value: float
+    significant: bool
+    confidence: float = 0.95
+
+
 class RegressionReport(BaseModel):
     """Result of comparing a current run against a baseline run (§25.15)."""
 
