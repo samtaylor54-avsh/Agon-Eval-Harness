@@ -34,6 +34,38 @@ FAIL_GATE = 1
 PASS_GATE = 0
 
 
+def _parse_fail_on_error(value: str) -> bool | float:
+    low = value.strip().lower()
+    if low in ("true", "false"):
+        return low == "true"
+    return float(value)
+
+
+def _apply_resilience_flags(
+    cfg: RunConfig,
+    *,
+    max_retries: int | None = None,
+    request_timeout: int | None = None,
+    attempt_timeout: int | None = None,
+    retry_on_error: int | None = None,
+    sample_time_limit: int | None = None,
+    fail_on_error: str | None = None,
+) -> None:
+    r = cfg.resilience
+    if max_retries is not None:
+        r.max_retries = max_retries
+    if request_timeout is not None:
+        r.request_timeout = request_timeout
+    if attempt_timeout is not None:
+        r.attempt_timeout = attempt_timeout
+    if retry_on_error is not None:
+        r.retry_on_error = retry_on_error
+    if sample_time_limit is not None:
+        r.sample_time_limit = sample_time_limit
+    if fail_on_error is not None:
+        r.fail_on_error = _parse_fail_on_error(fail_on_error)
+
+
 @app.command()
 def run(
     dataset: str = typer.Argument(..., help="Path to a dataset (.yaml/.json/.jsonl)"),
@@ -46,6 +78,20 @@ def run(
     report_dir: str = typer.Option(None, "--report-dir"),
     baseline: str = typer.Option(None, "--baseline", help="Baseline run_id for regression"),
     display: str = typer.Option("plain", "--display", help="Inspect display: plain|rich|none"),
+    max_retries: int = typer.Option(None, "--max-retries", help="Per-request retry count"),
+    request_timeout: int = typer.Option(
+        None, "--request-timeout", help="Whole-request timeout (s)"
+    ),
+    attempt_timeout: int = typer.Option(
+        None, "--attempt-timeout", help="Per-attempt timeout (s)"
+    ),
+    retry_on_error: int = typer.Option(None, "--retry-on-error", help="Per-sample retry count"),
+    sample_time_limit: int = typer.Option(
+        None, "--sample-time-limit", help="Per-sample time limit (s)"
+    ),
+    fail_on_error: str = typer.Option(
+        None, "--fail-on-error", help="true|false or error-rate 0..1"
+    ),
 ) -> None:
     """Run an eval suite and emit Markdown/JSON/JUnit reports + a release recommendation."""
     cfg = load_run_config(config) if config else RunConfig()
@@ -65,6 +111,16 @@ def run(
         cfg.report_dir = report_dir
     if baseline:
         cfg.baseline_run = baseline
+
+    _apply_resilience_flags(
+        cfg,
+        max_retries=max_retries,
+        request_timeout=request_timeout,
+        attempt_timeout=attempt_timeout,
+        retry_on_error=retry_on_error,
+        sample_time_limit=sample_time_limit,
+        fail_on_error=fail_on_error,
+    )
 
     try:
         ds = load_dataset(dataset)
