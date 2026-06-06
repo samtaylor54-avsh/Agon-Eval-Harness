@@ -20,7 +20,7 @@ DEFAULT_PRICES: dict[str, tuple[float, float]] = {
 }
 
 # Offline / mock providers cost nothing by construction (their tokens are synthetic).
-FREE_PROVIDERS = {"mockllm"}
+FREE_PROVIDERS: frozenset[str] = frozenset({"mockllm"})
 
 
 def normalize_model(model: str) -> str:

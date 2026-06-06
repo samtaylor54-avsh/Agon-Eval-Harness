@@ -33,8 +33,9 @@ def _offline_log(tmp_path):
 def test_digest_carries_cost_summary(tmp_path):
     d = digest(_offline_log(tmp_path))
     assert isinstance(d.cost, CostSummary)
-    # Offline mockllm -> no priced usage burned -> $0.
+    # Offline mockllm is priced as free (synthetic tokens) -> clean $0, fully priced, no notes.
     assert d.cost.total_usd == 0.0
+    assert d.cost.priced is True
 
 
 def test_markdown_has_cost_section(tmp_path):

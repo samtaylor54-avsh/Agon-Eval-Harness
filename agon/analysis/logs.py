@@ -116,10 +116,10 @@ def digest(log: EvalLog) -> RunDigest:
     stats = getattr(log, "stats", None)
     model_usage = getattr(stats, "model_usage", {}) or {}
     usage_by_model = {
-        model: TokenUsage(
+        model_name: TokenUsage(
             input=mu.input_tokens, output=mu.output_tokens, total=mu.total_tokens
         )
-        for model, mu in model_usage.items()
+        for model_name, mu in model_usage.items()
     }
     cost = summarize_cost(usage_by_model)
 
