@@ -72,11 +72,11 @@ def kappa_components(human: list[bool], judge: list[bool]) -> tuple[float, float
 
 def cohen_kappa(human: list[bool], judge: list[bool]) -> float:
     """Cohen's kappa for two binary raters."""
+    if not human:
+        return 0.0
     po, pe = kappa_components(human, judge)
     if pe >= 1.0:
         return 1.0  # perfect, degenerate agreement
-    if len(human) == 0:
-        return 0.0
     return (po - pe) / (1 - pe)
 
 
@@ -126,8 +126,9 @@ async def run_calibration(
     n = len(cset.cases)
     accuracy = sum(h == j for h, j in zip(human_labels, judge_labels, strict=True)) / n
     po, pe = kappa_components(human_labels, judge_labels)
-    kappa = cohen_kappa(human_labels, judge_labels)
     kappa_ci = kappa_interval(po, pe, n)
+    # The interval's point IS Cohen's kappa (same formula + degenerate cases), so compute once.
+    kappa = kappa_ci.point
     return CalibrationReport(
         scorer_type=cset.scorer_type,
         n=n,

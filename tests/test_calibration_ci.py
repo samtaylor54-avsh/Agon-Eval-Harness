@@ -1,5 +1,7 @@
 """Phase 3 M6 -- calibration reports a confidence interval on Cohen's kappa."""
 
+import pytest
+
 from agon.calibrate.runner import kappa_components
 from agon.schemas import Interval
 from agon.stats import kappa_interval
@@ -20,4 +22,5 @@ def test_kappa_interval_from_components():
     po, pe = kappa_components(human, judge)
     iv = kappa_interval(po, pe, len(human))
     assert isinstance(iv, Interval)
+    assert iv.point == pytest.approx(0.6154, abs=1e-3)  # (0.8-0.48)/(1-0.48)
     assert -1.0 <= iv.low <= iv.point <= iv.high <= 1.0
