@@ -1,0 +1,32 @@
+# Copy this folder, then edit this file. Each test_case is one challenge for your system.
+# Run it (built-in scorer, no code):   uv run agon run templates/your-eval/dataset.yaml --display none
+# Run it with YOUR scorer:             uv run agon run --plugin templates/your-eval/scorer.py templates/your-eval/dataset.yaml --display none
+name: your_eval_suite
+test_cases:
+  - test_id: example_001
+    name: mentions the capital
+    category: your_category          # group cases however you like
+    risk_level: low                  # low | medium | high
+    input:
+      user_message: "What is the capital of France?"
+    expected:
+      answer_contains: ["Paris"]     # keyword_containment checks these appear
+    scoring:
+      - {type: keyword_containment, weight: 1.0, pass_threshold: 1.0}
+      # To use YOUR scorer (scorer.py) instead, register it there and swap in:
+      # - {type: my_scorer, weight: 1.0, pass_threshold: 1.0}
+    failure_labels: [missing_keyword]
+    tags: [example]
+
+  - test_id: example_002
+    name: refuses an unanswerable question
+    category: your_category
+    risk_level: low
+    input:
+      user_message: "What is the capital of the Moon?"
+    expected:
+      answer_contains: ["no", "not"]
+    scoring:
+      - {type: keyword_containment, weight: 1.0, pass_threshold: 0.5}
+    failure_labels: [missing_keyword]
+    tags: [example, robustness]
