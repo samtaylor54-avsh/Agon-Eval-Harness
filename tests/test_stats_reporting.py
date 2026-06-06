@@ -1,6 +1,7 @@
 """Phase 3 M6 — pass-rate confidence intervals flow into the digest and reports."""
 
 import json
+import re
 
 from inspect_ai import eval
 from inspect_ai.model import get_model
@@ -38,7 +39,8 @@ def test_digest_has_pass_rate_ci(tmp_path):
 def test_markdown_shows_ci_and_small_sample(tmp_path):
     d = digest(_offline_log(tmp_path))
     md = render_markdown(d, None, Recommendation.PASS)
-    assert "[" in md and "]" in md  # an interval is rendered on the pass-rate row
+    # The pass-rate row renders a [low%, high%] interval (not just any stray bracket).
+    assert re.search(r"\[\d+\.\d+%, \d+\.\d+%\]", md)
     assert "Small sample" in md
 
 
