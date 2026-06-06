@@ -41,6 +41,7 @@ def _digest_clean(tmp_path):
 def test_json_has_error_by_category(tmp_path):
     d = _digest_with_error(tmp_path)
     payload = json.loads(render_json(d, None, Recommendation.FAIL))
+    # "connection refused" matches the NETWORK classifier marker -> category "network"
     assert payload["error_count_by_category"] == {"network": 1}
 
 
@@ -61,3 +62,28 @@ def test_junit_error_message_uses_category(tmp_path):
     d = _digest_with_error(tmp_path)
     xml = render_junit_xml(d)
     assert 'message="network"' in xml
+
+
+def test_junit_failures_count_excludes_errored_cases(tmp_path):
+    # ok -> passes; fail -> wrong expected answer (plain failure, no error);
+    # err -> SUT raises (error). The errored case must NOT inflate failures=.
+    cases = [
+        AgonCase(
+            test_id="ok", name="ok", category="c", input={"user_message": "hi"},
+            expected={"expected_answer": "the answer"}, scoring=[ScoringSpec(type="exact_match")],
+        ),
+        AgonCase(
+            test_id="fail", name="fail", category="c", input={"user_message": "hi"},
+            expected={"expected_answer": "different"}, scoring=[ScoringSpec(type="exact_match")],
+        ),
+        AgonCase(
+            test_id="err", name="err", category="c", input={"user_message": "boom"},
+            expected={"expected_answer": "the answer"}, scoring=[ScoringSpec(type="exact_match")],
+        ),
+    ]
+    ds = AgonDataset(name="mixed", dataset_version="v0", test_cases=cases)
+    cfg = RunConfig(log_dir=str(tmp_path), sut=SUTConfig(adapter="callable"))
+    log = run_eval(ds, cfg, callable_fn=_boom_fn, display="none")
+    xml = render_junit_xml(digest(log))
+    assert 'failures="1"' in xml  # only the "fail" case; the errored case is excluded
+    assert 'errors="1"' in xml    # only the "err" case
