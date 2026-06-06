@@ -1,5 +1,18 @@
 """Closed-form statistics for agon (Phase 3 M6) — pure Python, no scipy."""
 
 from agon.stats.normal import normal_cdf, z_critical
+from agon.stats.proportion import (
+    SMALL_SAMPLE_N,
+    small_sample,
+    two_proportion_test,
+    wilson_interval,
+)
 
-__all__ = ["normal_cdf", "z_critical"]
+__all__ = [
+    "SMALL_SAMPLE_N",
+    "normal_cdf",
+    "small_sample",
+    "two_proportion_test",
+    "wilson_interval",
+    "z_critical",
+]

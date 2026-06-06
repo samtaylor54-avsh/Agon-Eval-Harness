@@ -10,7 +10,8 @@ def test_interval_and_proportiontest_construct():
     iv = Interval(point=0.8, low=0.49, high=0.94)
     assert iv.confidence == 0.95
     pt = ProportionTest(diff=0.1, z=1.98, p_value=0.048, significant=True)
-    assert pt.significant is True and pt.confidence == 0.95
+    assert pt.significant is True
+    assert pt.confidence == 0.95
 
 
 def test_normal_cdf_known_values():
@@ -24,3 +25,47 @@ def test_z_critical():
     assert z_critical(0.90) == pytest.approx(1.64485, abs=1e-4)
     with pytest.raises(ValueError):
         z_critical(0.5)
+
+
+from agon.stats import small_sample, two_proportion_test, wilson_interval  # noqa: E402
+
+
+def test_wilson_interval_textbook():
+    iv = wilson_interval(8, 10)
+    assert iv.point == pytest.approx(0.8)
+    assert iv.low == pytest.approx(0.4902, abs=1e-3)
+    assert iv.high == pytest.approx(0.9433, abs=1e-3)
+
+
+def test_wilson_interval_boundaries():
+    empty = wilson_interval(0, 0)
+    assert empty.low == 0.0 and empty.high == 1.0 and empty.point == 0.0
+    full = wilson_interval(10, 10)
+    assert full.point == 1.0 and full.high == pytest.approx(1.0, abs=1e-9)
+    zero = wilson_interval(0, 10)
+    assert zero.point == 0.0 and zero.low == 0.0
+
+
+def test_two_proportion_test_significant():
+    pt = two_proportion_test(90, 100, 80, 100)
+    assert pt.diff == pytest.approx(0.1)
+    assert pt.z == pytest.approx(1.980, abs=1e-2)
+    assert pt.p_value == pytest.approx(0.0477, abs=1e-3)
+    assert pt.significant is True
+
+
+def test_two_proportion_test_not_significant():
+    pt = two_proportion_test(45, 50, 40, 50)
+    assert pt.p_value == pytest.approx(0.1614, abs=1e-3)
+    assert pt.significant is False
+
+
+def test_two_proportion_test_degenerate():
+    pt = two_proportion_test(0, 0, 5, 10)
+    assert pt.p_value == 1.0 and pt.significant is False
+
+
+def test_small_sample():
+    assert small_sample(10) is True
+    assert small_sample(30) is False
+    assert small_sample(100) is False
