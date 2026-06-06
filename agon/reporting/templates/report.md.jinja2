@@ -27,7 +27,8 @@
 - Regression detected: **{{ "YES" if regression.regression_detected else "no" }}**
 - New failures: {{ regression.new_failures | join(", ") or "none" }}
 - Fixed failures: {{ regression.fixed_failures | join(", ") or "none" }}
-{% for tid, old, new in regression.score_drops %}- Score drop {{ tid }}: {{ "%.2f"|format(old) }} → {{ "%.2f"|format(new) }}
+{% if regression.pass_rate_test %}- Overall pass-rate diff: {{ "%+.1f"|format(regression.pass_rate_test.diff * 100) }}pp (p={{ "%.3f"|format(regression.pass_rate_test.p_value) }}, {{ "significant" if regression.pass_rate_test.significant else "not significant" }}{{ "; small sample" if regression.small_sample else "" }})
+{% endif %}{% for tid, old, new in regression.score_drops %}- Score drop {{ tid }}: {{ "%.2f"|format(old) }} → {{ "%.2f"|format(new) }}
 {% endfor %}{% endif %}
 {% if failed %}## Failed cases
 | Test | Category | Risk | Composite | Failure labels |

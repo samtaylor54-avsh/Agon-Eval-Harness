@@ -180,6 +180,14 @@ def compare(
     typer.echo(f"regression detected: {reg.regression_detected}")
     typer.echo(f"  new failures:   {', '.join(reg.new_failures) or 'none'}")
     typer.echo(f"  fixed failures: {', '.join(reg.fixed_failures) or 'none'}")
+    t = reg.pass_rate_test
+    if t is not None:
+        note = "significant" if t.significant else "not significant"
+        small = "; small sample" if reg.small_sample else ""
+        typer.echo(
+            f"  overall pass-rate diff: {t.diff * 100:+.1f}pp "
+            f"(p={t.p_value:.3f}, {note}{small})"
+        )
     for tid, old, new in reg.score_drops:
         typer.echo(f"  drop {tid}: {old:.2f} ->{new:.2f}")
     raise typer.Exit(FAIL_GATE if reg.regression_detected else PASS_GATE)

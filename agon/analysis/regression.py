@@ -6,6 +6,8 @@ from inspect_ai.log import EvalLog
 
 from agon.analysis.logs import RunDigest, digest
 from agon.schemas import RegressionReport
+from agon.stats import small_sample as is_small_sample
+from agon.stats import two_proportion_test
 
 DEFAULT_EPSILON = 0.05
 HIGH_RISK = {"high", "critical"}
@@ -40,6 +42,13 @@ def compare_digests(
     severe_drop = any(cur[t].risk_level in HIGH_RISK for t, _o, _n in score_drops)
     regression_detected = bool(new_failures) or severe_drop
 
+    cur_pass = sum(1 for r in current.records if r.passed)
+    cur_n = len(current.records)
+    base_pass = sum(1 for r in baseline.records if r.passed)
+    base_n = len(baseline.records)
+    pass_rate_test = two_proportion_test(cur_pass, cur_n, base_pass, base_n)
+    small = is_small_sample(cur_n) or is_small_sample(base_n)
+
     return RegressionReport(
         current_run_id=current.run_id,
         baseline_run_id=baseline.run_id,
@@ -50,6 +59,8 @@ def compare_digests(
         score_improvements=score_improvements,
         category_regressions=category_regressions,
         regression_detected=regression_detected,
+        pass_rate_test=pass_rate_test,
+        small_sample=small,
     )
 
 

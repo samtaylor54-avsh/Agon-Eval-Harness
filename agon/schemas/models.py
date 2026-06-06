@@ -263,3 +263,5 @@ class RegressionReport(BaseModel):
     score_improvements: list[tuple[str, float, float]] = Field(default_factory=list)
     category_regressions: dict[str, tuple[float, float]] = Field(default_factory=dict)
     regression_detected: bool = False
+    pass_rate_test: ProportionTest | None = None
+    small_sample: bool = False
