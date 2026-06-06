@@ -1,5 +1,9 @@
 """Phase 3 M8 - resume building blocks (select / reconstruct / merge)."""
 
+from types import SimpleNamespace
+
+from inspect_ai.scorer import Score
+
 from agon.analysis.logs import SampleRecord, build_digest
 from agon.cost import CostSummary
 from agon.schemas import AgonCase, AgonDataset, RunConfig, ScoringSpec, SUTConfig
@@ -66,3 +70,15 @@ def test_merge_digests_prefers_rerun_and_recomputes():
     assert merged.overall_pass_rate == 1.0
     assert merged.error_count == 0
     assert merged.error_count_by_category == {}
+
+
+def test_select_incomplete_handles_score_without_metadata():
+    # A scored sample whose Score.metadata is None must not crash (Inspect allows None metadata).
+    from agon.analysis.logs import AGON_SCORER
+
+    sample = SimpleNamespace(
+        id="s1", error=None, limit=None, scores={AGON_SCORER: Score(value=1.0)}
+    )
+    log = SimpleNamespace(samples=[sample])
+    # Clean pass with no metadata -> not incomplete, and no AttributeError.
+    assert select_incomplete(log) == []

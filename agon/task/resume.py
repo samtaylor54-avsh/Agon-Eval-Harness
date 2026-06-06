@@ -22,7 +22,7 @@ def select_incomplete(log: EvalLog) -> list[EvalSample]:
     out: list[EvalSample] = []
     for sample in log.samples or []:
         score = (sample.scores or {}).get(AGON_SCORER)
-        scorer_errored = bool(score.metadata.get("errored")) if score is not None else False
+        scorer_errored = bool((score.metadata or {}).get("errored")) if score is not None else False
         if sample.error is not None or sample.limit is not None or score is None or scorer_errored:
             out.append(sample)
     return out
