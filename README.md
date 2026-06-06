@@ -65,8 +65,6 @@ What the harness measures, and the question each category answers:
 - **Reliability** — Can it repeat a success consistently, not just once?
 - **Safety** — Does it avoid unacceptable behaviors and failure modes?
 
-Reports break errors down by category (`timeout` / `resource` / `network` / `scorer` / `sample`) via `error_count_by_category`; individual dataset cases may also set a `sample_time_limit` to enforce a per-case timeout independent of the run-level default.
-
 ---
 
 ## Core Philosophy
@@ -292,7 +290,7 @@ To evaluate a **real** system, point the SUT and judge at a provider via a run c
 | `dataset/` | YAML→`Sample` loader, content-addressed `dataset_version` |
 | `sut/` | SUT adapters: `mockllm` (offline), `callable`, `http` |
 | `scoring/` | 11 scorers (exact/keyword/citation/rubric/safety/RAG…) + composite + flake reducers |
-| `analysis/` | Eval-log digests + regression comparator |
+| `analysis/` | Eval-log digests + regression comparator; errors broken down by category (`timeout` / `resource` / `network` / `scorer` / `sample`) via `error_count_by_category`; dataset cases may set `sample_time_limit` for a per-case timeout independent of the run-level default |
 | `reporting/` | Markdown / JSON / JUnit-XML + PASS/FAIL/INVESTIGATE recommendation |
 | `calibrate/` | Judge-vs-human agreement (Cohen's κ) |
 | `retrieval/` | Isolated retrieval evals — BM25 + LanceDB + RRF hybrid, recall@k/MRR/nDCG/hit@k (Phase 2 M1) |
