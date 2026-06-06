@@ -37,7 +37,7 @@ def price_for(
     Offline/mock providers (FREE_PROVIDERS) price at zero so a default offline run reports a clean
     $0.00 rather than as an unpriced unknown model.
     """
-    provider = model.split("/", 1)[0] if "/" in model else ""
+    provider = model.split("/", 1)[0]  # bare "mockllm" or "mockllm/model" both -> "mockllm"
     if provider in FREE_PROVIDERS:
         return (0.0, 0.0)
     return prices.get(normalize_model(model))

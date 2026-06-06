@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 
 import anyio
 import typer
+from pydantic import ValidationError
 
 from agon.analysis import compare_runs, find_run
 from agon.calibrate import load_calibration_set, run_calibration
@@ -112,15 +113,19 @@ def run(
     if baseline:
         cfg.baseline_run = baseline
 
-    _apply_resilience_flags(
-        cfg,
-        max_retries=max_retries,
-        request_timeout=request_timeout,
-        attempt_timeout=attempt_timeout,
-        retry_on_error=retry_on_error,
-        sample_time_limit=sample_time_limit,
-        fail_on_error=fail_on_error,
-    )
+    try:
+        _apply_resilience_flags(
+            cfg,
+            max_retries=max_retries,
+            request_timeout=request_timeout,
+            attempt_timeout=attempt_timeout,
+            retry_on_error=retry_on_error,
+            sample_time_limit=sample_time_limit,
+            fail_on_error=fail_on_error,
+        )
+    except (ValueError, ValidationError) as exc:
+        typer.echo(f"[abort] invalid resilience flag: {exc}", err=True)
+        raise typer.Exit(ABORT) from exc
 
     try:
         ds = load_dataset(dataset)
