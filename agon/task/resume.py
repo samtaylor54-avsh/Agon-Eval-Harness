@@ -8,11 +8,25 @@ re-run just those, and merge with the prior run's already-passing records.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from inspect_ai.log import EvalLog, EvalSample
 
-from agon.analysis.logs import AGON_SCORER, RunDigest, SampleRecord, build_digest
+from agon.analysis.logs import (
+    AGON_SCORER,
+    RunDigest,
+    SampleRecord,
+    build_digest,
+    digest,
+    find_run,
+    latest_run,
+)
+from agon.analysis.regression import compare_digests
 from agon.dataset import METADATA_CASE_KEY
-from agon.schemas import AgonCase, AgonDataset
+from agon.reporting.generator import recommend, render_json, render_junit_xml, render_markdown
+from agon.schemas import AgonCase, AgonDataset, RunConfig
+from agon.sut.solvers import SUTCallable
+from agon.task.builder import run_eval
 
 
 def select_incomplete(log: EvalLog) -> list[EvalSample]:
@@ -73,3 +87,71 @@ def merge_digests(prior: RunDigest, rerun: RunDigest) -> RunDigest:
         created=rerun.created,
         cost=rerun.cost,
     )
+
+
+def resume_run(
+    cfg: RunConfig,
+    run_id: str | None,
+    *,
+    callable_fn: SUTCallable | None = None,
+    display: str = "none",
+) -> dict:
+    """Re-run a prior run's incomplete cases and write a merged report.
+
+    ``run_id=None`` resumes the most recent run in ``cfg.log_dir``. Returns a dict with
+    ``resumed`` (count of cases re-run), the merged ``digest``, the ``regression`` vs the
+    prior run, the ``recommendation``, the rendered ``artifacts``, and ``written`` paths.
+    """
+    prior = find_run(cfg.log_dir, run_id) if run_id else latest_run(cfg.log_dir)
+    prior_digest = digest(prior)
+
+    incomplete = select_incomplete(prior)
+    if not incomplete:
+        rec = recommend(
+            prior_digest,
+            None,
+            pass_threshold=cfg.pass_threshold,
+            investigate_threshold=cfg.investigate_threshold,
+        )
+        return {
+            "resumed": 0,
+            "digest": prior_digest,
+            "regression": None,
+            "recommendation": rec,
+            "artifacts": {},
+            "written": {},
+        }
+
+    sub = cases_from_log(prior, incomplete)
+    new_log = run_eval(sub, cfg, callable_fn=callable_fn, display=display)
+    rerun_digest = digest(new_log)
+    merged = merge_digests(prior_digest, rerun_digest)
+
+    regression = compare_digests(merged, prior_digest)
+    recommendation = recommend(
+        merged,
+        regression,
+        pass_threshold=cfg.pass_threshold,
+        investigate_threshold=cfg.investigate_threshold,
+    )
+    artifacts = {
+        "report.md": render_markdown(merged, regression, recommendation),
+        "report.json": render_json(merged, regression, recommendation),
+        "report.junit.xml": render_junit_xml(merged),
+    }
+    written: dict[str, str] = {}
+    if cfg.report_dir:
+        out = Path(cfg.report_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        for name, content in artifacts.items():
+            path = out / f"{merged.run_id}.{name}"
+            path.write_text(content, encoding="utf-8")
+            written[name] = str(path)
+    return {
+        "resumed": len(incomplete),
+        "digest": merged,
+        "regression": regression,
+        "recommendation": recommendation,
+        "artifacts": artifacts,
+        "written": written,
+    }
