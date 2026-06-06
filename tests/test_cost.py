@@ -56,3 +56,11 @@ def test_summarize_empty_usage_is_free_and_priced():
     assert summary.total_usd == 0.0
     assert summary.usage.total == 0
     assert summary.priced is True
+
+
+def test_estimate_free_provider_is_zero_and_priced():
+    # mockllm (and other mock providers) are free by construction, even with synthetic tokens.
+    est = estimate_cost("mockllm/model", TokenUsage(input=1, output=33, total=34), PRICES)
+    assert est.priced is True
+    assert est.total_usd == 0.0
+    assert est.note is None

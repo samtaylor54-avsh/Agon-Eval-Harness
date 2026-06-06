@@ -19,6 +19,9 @@ DEFAULT_PRICES: dict[str, tuple[float, float]] = {
     "gpt-4o-mini": (0.15, 0.60),
 }
 
+# Offline / mock providers cost nothing by construction (their tokens are synthetic).
+FREE_PROVIDERS = {"mockllm"}
+
 
 def normalize_model(model: str) -> str:
     """Strip a provider prefix and lowercase. 'Anthropic/Claude-Opus-4-5' -> 'claude-opus-4-5'."""
@@ -29,5 +32,12 @@ def normalize_model(model: str) -> str:
 def price_for(
     model: str, prices: dict[str, tuple[float, float]] = DEFAULT_PRICES
 ) -> tuple[float, float] | None:
-    """Return (input_rate, output_rate) per 1M tokens, or None if the model is not in the table."""
+    """Return (input_rate, output_rate) per 1M tokens, or None if the model is not in the table.
+
+    Offline/mock providers (FREE_PROVIDERS) price at zero so a default offline run reports a clean
+    $0.00 rather than as an unpriced unknown model.
+    """
+    provider = model.split("/", 1)[0] if "/" in model else ""
+    if provider in FREE_PROVIDERS:
+        return (0.0, 0.0)
     return prices.get(normalize_model(model))
