@@ -15,6 +15,7 @@ Copy this folder somewhere and edit it to build your own Agon eval. Do it in thi
    plugin loader (no need to fork agon):
 
    ```bash
+   # from inside this folder; from the repo root, prefix both paths with templates/your-eval/
    uv run agon run --plugin scorer.py dataset.yaml --display none
    ```
 

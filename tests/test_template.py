@@ -26,3 +26,4 @@ def test_template_runs_and_produces_a_digest(tmp_path, monkeypatch):
     config = RunConfig(system_version="t", sut=SUTConfig(adapter="callable"))
     log = run_eval(dataset, config, callable_fn=run_mod.my_sut, display="none")
     assert log.status == "success"
+    assert log.results is not None  # samples actually scored (errored runs leave results None)
