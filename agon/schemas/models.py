@@ -16,7 +16,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 SAFETY_SCORER_TYPE = "safety"
 
@@ -126,6 +126,29 @@ class AgonDataset(BaseModel):
 # --------------------------------------------------------------------------- #
 # Run configuration
 # --------------------------------------------------------------------------- #
+class ResilienceConfig(BaseModel):
+    """Run-resilience knobs. Each field passes through to Inspect's eval()/GenerateConfig;
+    Inspect (and LiteLLM) execute the retry/backoff/timeout — agon only wires and validates."""
+
+    # validate_assignment so the field validators also fire on direct attribute assignment
+    # (the CLI applier sets fields one at a time, bypassing construction-time validation).
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
+
+    max_retries: int = Field(default=5, ge=0)  # per-request retries (Inspect default is unlimited)
+    request_timeout: int | None = Field(default=None, ge=1)  # whole-request timeout (s)
+    attempt_timeout: int | None = Field(default=None, ge=1)  # per-attempt timeout (s)
+    retry_on_error: int = Field(default=0, ge=0)  # per-sample retries
+    sample_time_limit: int | None = Field(default=None, ge=1)  # per-sample wall-clock cap (s)
+    fail_on_error: bool | float = False  # True/False, or an error-rate threshold in 0..1
+
+    @field_validator("fail_on_error")
+    @classmethod
+    def _validate_fail_on_error(cls, v: bool | float) -> bool | float:
+        if isinstance(v, float) and not (0.0 <= v <= 1.0):
+            raise ValueError("fail_on_error float must be in 0..1")
+        return v
+
+
 class SUTConfig(BaseModel):
     """How to reach the System Under Test. Defaults to the offline mock provider."""
 
@@ -165,7 +188,7 @@ class RunConfig(BaseModel):
     epochs: int = Field(default=1, ge=1)  # repetitions per case
     flake_rule: str = "all"  # "all" | "any" | "majority"
     max_connections: int = Field(default=8, ge=1)
-    fail_fast: bool = False
+    resilience: ResilienceConfig = Field(default_factory=ResilienceConfig)
     baseline_run: str | None = None
     log_dir: str = "logs"
     report_dir: str = "reports"

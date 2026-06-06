@@ -14,6 +14,9 @@ from typing import Any
 from inspect_ai.log import EvalLog, list_eval_logs, read_eval_log
 from pydantic import BaseModel, ConfigDict, Field
 
+from agon.cost import CostSummary, summarize_cost
+from agon.sut.contract import TokenUsage
+
 AGON_SCORER = "agon_scorer"
 
 
@@ -45,6 +48,7 @@ class RunDigest(BaseModel):
     pass_rate_by_risk: dict[str, float]
     top_failure_labels: list[tuple[str, int]]
     error_count: int
+    cost: CostSummary = Field(default_factory=CostSummary)
 
     def record_map(self) -> dict[str, SampleRecord]:
         return {r.test_id: r for r in self.records}
@@ -109,6 +113,16 @@ def digest(log: EvalLog) -> RunDigest:
         if not r.passed:
             label_counter.update(r.detected_failure_labels)
 
+    stats = getattr(log, "stats", None)
+    model_usage = getattr(stats, "model_usage", {}) or {}
+    usage_by_model = {
+        model_name: TokenUsage(
+            input=mu.input_tokens, output=mu.output_tokens, total=mu.total_tokens
+        )
+        for model_name, mu in model_usage.items()
+    }
+    cost = summarize_cost(usage_by_model)
+
     meta = log.eval.metadata or {}
     return RunDigest(
         run_id=log.eval.run_id,
@@ -123,6 +137,7 @@ def digest(log: EvalLog) -> RunDigest:
         pass_rate_by_risk={k: _rate(v[0], v[1]) for k, v in sorted(risk_pass.items())},
         top_failure_labels=label_counter.most_common(),
         error_count=sum(1 for r in records if r.errored),
+        cost=cost,
     )
 
 
