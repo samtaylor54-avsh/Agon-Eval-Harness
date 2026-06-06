@@ -15,6 +15,9 @@ from inspect_ai.log import EvalLog, list_eval_logs, read_eval_log
 from pydantic import BaseModel, ConfigDict, Field
 
 from agon.cost import CostSummary, summarize_cost
+from agon.schemas import Interval
+from agon.stats import small_sample as is_small_sample
+from agon.stats import wilson_interval
 from agon.sut.contract import TokenUsage
 
 AGON_SCORER = "agon_scorer"
@@ -49,6 +52,12 @@ class RunDigest(BaseModel):
     top_failure_labels: list[tuple[str, int]]
     error_count: int
     cost: CostSummary = Field(default_factory=CostSummary)
+    n_cases: int = 0
+    overall_pass_ci: Interval = Field(
+        default_factory=lambda: Interval(point=0.0, low=0.0, high=1.0)
+    )
+    pass_ci_by_category: dict[str, Interval] = Field(default_factory=dict)
+    small_sample: bool = False
 
     def record_map(self) -> dict[str, SampleRecord]:
         return {r.test_id: r for r in self.records}
@@ -113,6 +122,9 @@ def digest(log: EvalLog) -> RunDigest:
         if not r.passed:
             label_counter.update(r.detected_failure_labels)
 
+    overall_pass_ci = wilson_interval(passed, total)
+    pass_ci_by_category = {k: wilson_interval(v[0], v[1]) for k, v in sorted(cat_pass.items())}
+
     stats = getattr(log, "stats", None)
     model_usage = getattr(stats, "model_usage", {}) or {}
     usage_by_model = {
@@ -138,6 +150,10 @@ def digest(log: EvalLog) -> RunDigest:
         top_failure_labels=label_counter.most_common(),
         error_count=sum(1 for r in records if r.errored),
         cost=cost,
+        n_cases=total,
+        overall_pass_ci=overall_pass_ci,
+        pass_ci_by_category=pass_ci_by_category,
+        small_sample=is_small_sample(total),
     )
 
 

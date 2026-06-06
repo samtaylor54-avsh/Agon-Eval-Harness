@@ -24,7 +24,7 @@ uv run python examples/adversarial_quickstart.py  # offline OWASP adversarial su
 uv run agon run examples/datasets/rag_smoke.yaml --model anthropic/claude-sonnet-4-5 --fail-on-error 0.1  # real-provider run (needs [providers] + a key); see docs/running-real-evals.md
 ```
 
-Key layout: `agon/{schemas,dataset,sut,scoring,analysis,reporting,calibrate,review,retrieval,task,config,cli}`,
+Key layout: `agon/{schemas,dataset,sut,scoring,analysis,reporting,calibrate,review,retrieval,task,config,cli,cost,observability,stats}`,
 tests under `tests/`, fixtures/examples under `examples/`. The offline path uses Inspect's
 `mockllm/model` provider — no API key or model downloads — which is what keeps the run inside the
 <20-minute reproducibility budget. Judge-based and semantic scorers are opt-in (real provider /
