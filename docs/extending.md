@@ -28,7 +28,7 @@ Run and validate it:
     uv run agon run path/to/your_dataset.yaml --display none
 
 Built-in scorers include `exact_match`, `keyword_containment`, `citation_check`, `json_schema`,
-and judge-backed ones (`rubric_judge`, `safety_judge`, ...) that need a real provider. See
+and judge-backed ones (`rubric`, `safety`, `faithfulness`, ...) that need a real provider. See
 `examples/datasets/rag_smoke.yaml` for a 20-case reference.
 
 **The test you owe:** none for data alone -- but if a case encodes a real failure you found, that
