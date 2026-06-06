@@ -7,10 +7,12 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
-from agon.schemas import SAFETY_SCORER_TYPE, AgonCase, ExpectedBehavior, ScoringSpec
+from agon.schemas import SAFETY_SCORER_TYPE, AgonCase, ExpectedBehavior, Interval, ScoringSpec
 from agon.scoring import default_registry
 from agon.scoring.base import ScorerRegistry
 from agon.scoring.judge import JudgeClient
+from agon.stats import kappa_interval
+from agon.stats import small_sample as is_small_sample
 from agon.sut import SUTResponse
 
 DEFAULT_MIN_KAPPA = 0.6  # "substantial" agreement (Landis & Koch)
@@ -49,22 +51,32 @@ class CalibrationReport(BaseModel):
     n: int
     accuracy: float
     cohen_kappa: float
+    kappa_ci: Interval = Field(default_factory=lambda: Interval(point=0.0, low=0.0, high=0.0))
+    small_sample: bool = False
     min_kappa: float
     passed: bool
     disagreements: list[tuple[str, bool, bool]]  # (test_id, human, judge)
 
 
-def cohen_kappa(human: list[bool], judge: list[bool]) -> float:
-    """Cohen's kappa for two binary raters."""
+def kappa_components(human: list[bool], judge: list[bool]) -> tuple[float, float]:
+    """Return (po, pe): observed and chance agreement for two binary raters."""
     n = len(human)
     if n == 0:
-        return 0.0
+        return 0.0, 0.0
     po = sum(h == j for h, j in zip(human, judge, strict=True)) / n
     p_h = sum(human) / n
     p_j = sum(judge) / n
     pe = p_h * p_j + (1 - p_h) * (1 - p_j)
+    return po, pe
+
+
+def cohen_kappa(human: list[bool], judge: list[bool]) -> float:
+    """Cohen's kappa for two binary raters."""
+    po, pe = kappa_components(human, judge)
     if pe >= 1.0:
         return 1.0  # perfect, degenerate agreement
+    if len(human) == 0:
+        return 0.0
     return (po - pe) / (1 - pe)
 
 
@@ -113,12 +125,16 @@ async def run_calibration(
 
     n = len(cset.cases)
     accuracy = sum(h == j for h, j in zip(human_labels, judge_labels, strict=True)) / n
+    po, pe = kappa_components(human_labels, judge_labels)
     kappa = cohen_kappa(human_labels, judge_labels)
+    kappa_ci = kappa_interval(po, pe, n)
     return CalibrationReport(
         scorer_type=cset.scorer_type,
         n=n,
         accuracy=accuracy,
         cohen_kappa=kappa,
+        kappa_ci=kappa_ci,
+        small_sample=is_small_sample(n),
         min_kappa=min_kappa,
         passed=kappa >= min_kappa,
         disagreements=disagreements,

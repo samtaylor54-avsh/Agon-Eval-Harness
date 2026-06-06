@@ -196,6 +196,7 @@ The build is sequenced in three phases. Each ends with a public, independently r
 ### Phase 3 — Red Team, Domain & Thesis
 - [x] **Adversarial suite (first cut)** — OWASP-for-Agents failure modes (prompt injection, goal hijacking, memory poisoning, tool misuse) detected fully offline via scripted vulnerable/resistant agents (M4, ADR-0005); full Top-10 + real-provider red-team pending
 - [x] **Real-provider hardening** — resilience knobs (retries/timeouts/sample-retry/time-limit/error-rate threshold) exposed via config + CLI, plus offline-provable **cost & token observability** in reports (M5, ADR-0006); secrets-manager + live red-team pending
+- [x] **Statistical rigor** — Wilson confidence intervals on pass rates, a two-proportion significance test + small-sample awareness in regression, and a Cohen's kappa CI in judge calibration; closed-form, no new dependency (M6, ADR-0007)
 - [ ] Regulated-domain eval harness (consequential-decision analog; synthetic data only)
 - [ ] Published methodology essay on what we measure when we measure an agentic system
 - [ ] Open-source contribution to `inspect_evals` or equivalent

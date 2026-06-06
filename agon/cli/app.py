@@ -351,10 +351,12 @@ def calibrate(
             err=True,
         )
         raise typer.Exit(ABORT) from exc
+    small = " (small sample)" if report.small_sample else ""
     typer.echo(
         f"calibration [{report.scorer_type}] n={report.n} "
-        f"accuracy={report.accuracy:.2f} kappa={report.cohen_kappa:.2f} "
-        f"(min {report.min_kappa}) ->{'PASS' if report.passed else 'FAIL'}"
+        f"accuracy={report.accuracy:.2f} "
+        f"kappa={report.cohen_kappa:.2f} [{report.kappa_ci.low:.2f}, {report.kappa_ci.high:.2f}] "
+        f"(min {report.min_kappa}){small} -> {'PASS' if report.passed else 'FAIL'}"
     )
     for tid, human, judged in report.disagreements:
         typer.echo(f"  disagree {tid}: human={human} judge={judged}")
