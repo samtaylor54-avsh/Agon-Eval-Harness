@@ -14,6 +14,7 @@ from typing import Any
 
 
 class ErrorCategory(StrEnum):
+    # Assigned only via sample.limit (wall-clock); transport timeouts in error text -> NETWORK.
     TIMEOUT = "timeout"
     RESOURCE = "resource"
     NETWORK = "network"
@@ -28,7 +29,7 @@ _RESOURCE_LIMITS = frozenset({"token", "cost", "context", "message"})
 
 # Best-effort transport/provider failure markers in an error message + traceback.
 _NETWORK_MARKERS = re.compile(
-    r"(connection|connect\b|timeout|timed out|rate.?limit|\b429\b|\b50\d\b|"
+    r"(\bconnection\b|\bconnect\b|timeout|timed out|rate.?limit|\b429\b|\b50\d\b|"
     r"bad gateway|service unavailable|apierror|apiconnection|apitimeout|"
     r"readtimeout|econnreset|broken pipe|\bssl\b)",
     re.IGNORECASE,
@@ -58,7 +59,7 @@ def classify_sample(sample: Any) -> ErrorCategory | None:
     """
     limit = getattr(sample, "limit", None)
     if limit is not None:
-        return classify_limit_type(limit.type)
+        return classify_limit_type(getattr(limit, "type", "") or "")
     error = getattr(sample, "error", None)
     if error is not None:
         text = f"{getattr(error, 'message', '')} {getattr(error, 'traceback', '')}"
