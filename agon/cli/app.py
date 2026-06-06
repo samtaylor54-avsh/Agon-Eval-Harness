@@ -23,8 +23,9 @@ from agon.dataset import DatasetValidationError, load_dataset
 from agon.reporting import generate_reports
 from agon.review import save_review
 from agon.schemas import JudgeConfig, Recommendation, ReviewRecord, RunConfig
-from agon.scoring import JudgeClient
+from agon.scoring import JudgeClient, default_registry
 from agon.scoring.judge import JudgeParseError
+from agon.scoring.plugins import PluginLoadError, load_plugins
 from agon.sut import health_check
 from agon.task import run_eval
 
@@ -67,6 +68,17 @@ def _apply_resilience_flags(
         r.fail_on_error = _parse_fail_on_error(fail_on_error)
 
 
+def _validate_scorers(ds) -> list[str]:
+    """Return the sorted scorer types referenced by the dataset that are not registered."""
+    unknown = {
+        spec.type
+        for case in ds.test_cases
+        for spec in case.scoring
+        if not default_registry.has(spec.type)
+    }
+    return sorted(unknown)
+
+
 @app.command()
 def run(
     dataset: str = typer.Argument(..., help="Path to a dataset (.yaml/.json/.jsonl)"),
@@ -79,6 +91,9 @@ def run(
     report_dir: str = typer.Option(None, "--report-dir"),
     baseline: str = typer.Option(None, "--baseline", help="Baseline run_id for regression"),
     display: str = typer.Option("plain", "--display", help="Inspect display: plain|rich|none"),
+    plugin: list[str] = typer.Option(  # noqa: B008
+        [], "--plugin", "-p", help="Import a scorer module (dotted name or .py path) before running"
+    ),
     max_retries: int = typer.Option(None, "--max-retries", help="Per-request retry count"),
     request_timeout: int = typer.Option(
         None, "--request-timeout", help="Whole-request timeout (s)"
@@ -128,10 +143,28 @@ def run(
         raise typer.Exit(ABORT) from exc
 
     try:
+        loaded = load_plugins(plugin)
+    except PluginLoadError as exc:
+        typer.echo(f"[abort] {exc}", err=True)
+        raise typer.Exit(ABORT) from exc
+    if loaded:
+        typer.echo(f"loaded plugin scorers: {', '.join(loaded)}")
+
+    try:
         ds = load_dataset(dataset)
     except (DatasetValidationError, FileNotFoundError, ValueError) as exc:
         typer.echo(f"[abort] {exc}", err=True)
         raise typer.Exit(ABORT) from exc
+
+    unknown = _validate_scorers(ds)
+    if unknown:
+        typer.echo(
+            f"[abort] unknown scorer_type(s): {', '.join(unknown)}; "
+            f"registered: {', '.join(default_registry.keys())}; "
+            f"did you forget --plugin <module-or-file>?",
+            err=True,
+        )
+        raise typer.Exit(ABORT)
 
     if not anyio.run(health_check, cfg.sut):
         typer.echo("[abort] SUT health check failed", err=True)
