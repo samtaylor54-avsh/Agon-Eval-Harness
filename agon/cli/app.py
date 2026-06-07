@@ -18,7 +18,7 @@ from pydantic import ValidationError
 
 from agon.analysis import compare_runs, find_run
 from agon.calibrate import load_calibration_set, run_calibration
-from agon.config import load_run_config
+from agon.config import load_env, load_run_config
 from agon.dataset import DatasetValidationError, load_dataset
 from agon.reporting import generate_reports
 from agon.review import save_review
@@ -26,6 +26,7 @@ from agon.schemas import JudgeConfig, Recommendation, ReviewRecord, RunConfig
 from agon.scoring import JudgeClient, default_registry
 from agon.scoring.judge import JudgeParseError
 from agon.scoring.plugins import PluginLoadError, load_plugins
+from agon.secrets import missing_provider_keys
 from agon.sut import health_check
 from agon.task import run_eval
 
@@ -39,15 +40,11 @@ PASS_GATE = 0
 @app.callback()
 def _load_env_callback() -> None:
     """Load a .env at CLI entry so preflight/doctor see those keys."""
-    from agon.config import load_env
-
     load_env()
 
 
 def _preflight(model: str | None, adapter: str) -> None:
     """Abort (exit 2) if a real-provider run is missing its required API key(s)."""
-    from agon.secrets import missing_provider_keys
-
     missing = missing_provider_keys(model, adapter)
     if missing:
         provider = (model or "").split("/")[0]
