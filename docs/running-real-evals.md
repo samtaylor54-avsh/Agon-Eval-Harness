@@ -15,6 +15,34 @@ uv run agon run examples/datasets/rag_smoke.yaml --model anthropic/claude-sonnet
 
 `--model <provider>/<model>` switches the SUT adapter from `mockllm` to `litellm` automatically.
 
+### Use a `.env` instead of exporting (optional)
+
+agon loads a `.env` from the working directory (walking up the tree) at startup. Keep keys out of
+your shell history:
+
+```bash
+# .env  (gitignored — never commit this)
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Process-environment variables always win over `.env` (a real exported key is never overridden by a
+stale file).
+
+### Check readiness before you run
+
+```bash
+uv run agon doctor                              # masked status of every known key
+uv run agon doctor --model anthropic/claude-sonnet-4-5   # is THIS provider's key present?
+```
+
+`doctor` masks every value (`sk-ant-...a3f9`) and never prints a raw key. If a real-provider `run`
+is missing its key, agon aborts immediately (exit 2) with the exact env var to set — no provider
+stack trace.
+
+> **Secrets are never stored or written.** agon redacts known keys (exact env values plus
+> recognizable key prefixes) from every report (md/json/junit) and OpenTelemetry span before it is
+> written, so an artifact is safe to share.
+
 ## 2. Tune resilience (all optional; sensible defaults)
 
 | Flag | Meaning | Default |
