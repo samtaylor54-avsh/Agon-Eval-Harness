@@ -59,6 +59,33 @@ Collapse is a form of concealment, and measurement is only useful if it preserve
 
 ## The Rules II: measurement is asymmetric
 
+Counting failures separately is necessary. It is not sufficient. The previous principle showed that collapsing dimensions conceals which categories are failing. This principle sharpens that: not only must failures be counted by category, some categories of failure are disqualifying no matter what the aggregate says. A flat pass rate does not merely hide failures — it obscures the difference between a missed deadline and an irreversible harm. Reality does not honor that confusion.
+
+Not all errors cost the same. A formatting slip in a structured output is recoverable; someone notices, corrects, and moves on. An escalation signal that gets quietly routed to "routine" when it should have triggered review is a different kind of failure entirely. It does not create an obvious artifact to correct. It creates silence — and silence, in consequential decisions, is the costliest possible output. The error is asymmetric, and the scoring has to be asymmetric to match.
+
+The harness includes a worked, offline, synthetic regulated-domain suite built to make this concrete. The domain is gait-sensor signal summaries routed to an escalation tier: routine monitoring, notify caregiver, urgent review, or defer for assessment. The system under evaluation is not diagnosing anything; it produces an escalation recommendation that a human then acts on — it supports human judgment, it does not replace it. What it can do is fail to surface cases that need a human, and that failure, under-escalation, is the asymmetrically expensive one.
+
+The demo run shows this clearly:
+
+```
+gait_triage_suite: 4/10 passed -> FAIL
+  (the CRITICAL under-escalation gait_004 would force FAIL even if every other case passed)
+```
+
+Four of ten cases pass. The suite returns FAIL. But that result is almost incidental to the sharper test. The harness encodes a separate assertion: route every case correctly except under-escalate the one case flagged CRITICAL, and you get 9 of 10 passing — 0.9, at the 0.9 pass threshold. On pass rate alone, that is a passing run. The suite still returns FAIL. The single CRITICAL under-escalation carries the label `unsafe_answer` and trips a binary-critical release gate that exists independently of the pass threshold. The gate does not weigh the miss against nine correct cases. It treats the miss as categorically disqualifying.
+
+The harness encodes this as a tested assertion:
+
+```
+tests/test_gait_triage.py::test_critical_miss_alone_forces_fail_above_pass_threshold PASSED
+```
+
+"Above" is the load-bearing word. The pass rate is at or above the threshold. The run fails anyway.
+
+The architectural consequence is direct: asymmetric error costs must be encoded in the scorer and the release gate — not surfaced after the run and left to a reviewer's discretion. A reviewer's judgment is fallible and variable; a gate is not. If the harness can report a passing aggregate while a CRITICAL case bearing `unsafe_answer` sits inside the passing set, the gate is not safe. The threshold and the binary check are not alternatives; they are different instruments measuring different things, and both must be present.
+
+This is what the agon metaphor demands at the level of scoring design: an accurate record of the contest requires knowing not just who won more exchanges, but which exchange, if lost, ends the match. Some failures are disqualifying by nature, not by weight. The harness has to know the difference, and it has to enforce that difference automatically. Leaving it to downstream judgment — to a human who skims the aggregate and sees 90% green — is precisely the kind of trust the measurement framework is meant to eliminate.
+
 ## The Judges: measurement must be calibrated
 
 ## The Record I: measurement is statistical
