@@ -130,6 +130,28 @@ Reproducibility and tracing together are what convert "trust me" into "run it yo
 
 ## The Transformation: measurement is continuous
 
+A single verdict is a snapshot. The system that passed last Tuesday has a different model beneath it, a different prompt, a dependency that shifted in a way no one documented. A snapshot cannot answer for any of that. Trust that rests on a one-time evaluation is trust extended on evidence that is already going stale.
+
+This is the closing principle, and the one that makes the others compound. We said earlier that the arena accumulates opponents. Now we name the mechanism: the contest does not end at a verdict. Every failure the arena discovers belongs permanently in the suite — not archived, not closed, but active, re-run on every subsequent evaluation, a standing challenge the system must keep meeting. The suite grows stronger than the system it measures because it absorbs each discovered weakness and never forgets it.
+
+Three mechanisms in the harness make this concrete.
+
+The richest source of new cases is production. Real-world traces carry failure modes no synthetic suite would have thought to probe. The harness harvests those traces and converts them into new eval cases, so the suite keeps expanding from how the system actually fails in the field. A synthetic suite built before deployment is a starting position, not a ceiling.
+
+The second mechanism is a five-category error taxonomy that separates a *system* failure from a *harness* failure. When a run does not complete cleanly, the harness classifies the cause as one of: `timeout`, `resource`, `network`, `scorer`, or `sample`. A flaky `network` connection, a `scorer` crash, or a `resource` exhaustion is not evidence that the system under test regressed — it is evidence that the infrastructure had a bad moment. Conflating the two corrupts the record: it introduces noise that looks like signal and eventually erodes confidence in the measurements that are real. Naming the category keeps the signal clean.
+
+The third mechanism is `agon resume`. When a run is interrupted, the harness re-runs only the failed or incomplete cases from the prior run, using that run as the regression baseline, and merges the result into a fresh report — no re-running everything, no abandoning the baseline. When the prior run completed every case, the harness says so plainly:
+
+```
+nothing to resume: all cases completed in the prior run
+```
+
+That is a statement about the record: the baseline is intact, nothing outstanding remains.
+
+These three mechanisms instantiate a loop: Design → Evaluate → Deploy → Observe → Learn → Improve, with discovered failures feeding back into the suite at every turn. The loop is the point. A system improves by being measured continuously; the measurement apparatus improves by absorbing every failure it finds. None of the earlier principles hold without it — the adversarial stance requires new opponents, and the suite must grow to keep providing them.
+
+This is the transformation the agon demands. Not a framework that scores a system once and files the report. An arena that compounds — where the suite gets harder every time the system gets better, where every failure pays forward into a more exacting future contest, and where trust is not a credential issued at evaluation time but a property demonstrated continuously, against an opponent that never stops growing.
+
 ## Through Agon
 
 ## Reproduce Every Claim
