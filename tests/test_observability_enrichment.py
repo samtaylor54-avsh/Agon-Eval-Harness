@@ -113,3 +113,23 @@ def test_error_taxonomy_on_run_and_sample_spans(tmp_path):
     assert cat_attrs  # e.g. agon.error_count.network == 1
     bad = next(s for s in spans if s.name == "invoke_agent bad")
     assert AGON_ERROR_CATEGORY in bad.attributes
+
+
+def test_sample_outcome_attrs_failure_labels_are_redacted_list(monkeypatch):
+    from agon import secrets
+    from agon.observability.exporter import _sample_outcome_attrs
+    from agon.observability.semconv import AGON_FAILURE_LABELS
+
+    for var in secrets.KNOWN_SECRET_ENV_VARS:
+        monkeypatch.delenv(var, raising=False)
+    rec = NS(
+        passed=False, composite_score=0.0, category="c", risk_level="high",
+        error_category=None,
+        detected_failure_labels=["missing_citation", "sk-ant-ABCDEFGHIJKLMNOP1234"],
+    )
+    attrs = _sample_outcome_attrs(rec)
+    labels = attrs[AGON_FAILURE_LABELS]
+    assert isinstance(labels, list)
+    assert "missing_citation" in labels
+    assert "sk-ant-...1234" in labels
+    assert "sk-ant-ABCDEFGHIJKLMNOP1234" not in labels

@@ -125,6 +125,7 @@ _EMITTERS = {"model": _emit_model, "tool": _emit_tool, "score": _emit_score}
 
 def _run_outcome_attrs(d: Any) -> dict[str, Any]:
     """Run-level scalar attributes from a RunDigest. recommendation uses default thresholds."""
+    # lazy: importing agon.reporting pulls in inspect_ai (~1s); defer until digest= is actually used
     from agon.reporting.generator import recommend
     from agon.schemas import RunConfig
 
@@ -157,12 +158,12 @@ def _sample_outcome_attrs(rec: Any) -> dict[str, Any]:
         AGON_PASSED: bool(rec.passed),
         AGON_COMPOSITE_SCORE: float(rec.composite_score),
         AGON_CATEGORY: redact(str(rec.category)),
-        AGON_RISK_LEVEL: str(rec.risk_level),
+        AGON_RISK_LEVEL: redact(str(rec.risk_level)),
     }
     if rec.error_category:
         attrs[AGON_ERROR_CATEGORY] = str(rec.error_category)
     if rec.detected_failure_labels:
-        attrs[AGON_FAILURE_LABELS] = redact(",".join(rec.detected_failure_labels))
+        attrs[AGON_FAILURE_LABELS] = [redact(label) for label in rec.detected_failure_labels]
     return attrs
 
 
