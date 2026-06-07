@@ -88,6 +88,18 @@ This is what the agon metaphor demands at the level of scoring design: an accura
 
 ## The Judges: measurement must be calibrated
 
+Every contest needs a judge, and in automated evaluation that judge is typically another model — an LLM asked to decide whether the system under test passed or failed. The moment you accept that arrangement without validating it, you have not removed uncertainty from your results; you have relocated it one layer up, where it is harder to see. An unvalidated judge does not ground your evaluation in human standards. It substitutes one unknown for another.
+
+We treat the judge as a component under evaluation for the same reason we treat everything else that way: the principle holds regardless of who is doing the measuring. A judge with unmeasured reliability is itself a measurement instrument with unmeasured reliability, and the verdicts it produces inherit that uncertainty whether you account for it or not.
+
+The harness validates a judge before certifying it by measuring agreement with held-out human labels using Cohen's kappa. The choice of kappa over raw accuracy is deliberate: kappa is chance-corrected. A judge that agrees with human raters only as often as random guessing would expect scores near zero, not near whatever the base rate happens to be. Perfect agreement scores `1.0`. Systematic disagreement — a judge that reliably inverts human judgment — scores below zero, which is exactly what `cohen_kappa([True, False], [False, True])` produces. A negative kappa is not merely a bad judge; it is an active source of inverted signal, and the sign tells you so plainly. Both outcomes — near-zero and negative — fail the gate.
+
+The gate is encoded as a minimum threshold: `run_calibration` with `min_kappa=0.6` requires the judge to clear that floor before its verdicts are trusted downstream. Agreement is not reported as a bare point but as an interval — `kappa_interval(0.85, 0.5, 25)` returns an interval spanning roughly `[0.42, 0.98]`. That spread is honest: a small calibration set leaves real uncertainty about generalization, and the interval makes that uncertainty visible rather than papering over it with a single number. A judge that cannot clear `0.6` is not certified, and any evaluation resting on it is not certified either.
+
+There is one limit to this process that must be stated plainly. Calibration is the one step in the harness that cannot run offline. The system under test can be mocked; the model driving it can be replaced with a deterministic stub. The human labels it must agree with cannot. The entire point of calibration is to measure whether the judge tracks human judgment — and you cannot simulate the standard you are calibrating against. That is not a gap in the harness; it is the nature of the problem. The thing doing the grading has to be graded by reality. An honest harness names that boundary and enforces it; a dishonest one fills it with numbers it invented.
+
+The referee in a contest must be credentialed, not assumed. The credential here is a measured kappa, a reported interval, and a gate that enforces a floor. A judge that cannot clear `min_kappa=0.6` does not officiate.
+
 ## The Record I: measurement is statistical
 
 ## The Record II: measurement is reproducible
