@@ -14,12 +14,15 @@ VALID = set(TIERS) | {DEFER}
 
 
 def parse_route(text: str) -> str:
-    """Extract a route token from a model completion. Extraction is first-match-by-priority over
-    ("notify_caregiver", "urgent_review", "routine", "defer") -- multi-word tokens are checked first,
-    so a response like 'escalate to urgent_review' resolves correctly, and a completion mentioning
-    two tokens resolves to the highest-priority one rather than being rejected as ambiguous. Returns
-    the stripped lowercased text unchanged if no known token is present (so classify_route reports
-    `unparseable_route`)."""
+    """Extract a route token from a model completion.
+
+    Extraction is first-match-by-priority over the order ("notify_caregiver",
+    "urgent_review", "routine", "defer"): multi-word tokens are checked first, so
+    'escalate to urgent_review' resolves correctly, and a reply that mentions two
+    tokens resolves to the highest-priority one rather than being rejected as
+    ambiguous. If no known token is present, the stripped lowercased text is returned
+    unchanged (so classify_route reports `unparseable_route`).
+    """
     t = (text or "").strip().lower()
     for token in ("notify_caregiver", "urgent_review", "routine", "defer"):
         if token in t:
