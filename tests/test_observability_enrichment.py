@@ -1,10 +1,13 @@
 """Phase 3 M10 - eval-outcome enrichment of OTel spans."""
 
+from pathlib import Path
 from types import SimpleNamespace as NS
 
 import pytest
 
 pytest.importorskip("opentelemetry.sdk")
+
+_FIXTURE_MINI = Path(__file__).parent / "fixtures" / "mini.yaml"
 
 from agon.analysis.logs import digest  # noqa: E402
 from agon.observability import export_eval_log, in_memory_tracer  # noqa: E402
@@ -133,3 +136,23 @@ def test_sample_outcome_attrs_failure_labels_are_redacted_list(monkeypatch):
     assert "missing_citation" in labels
     assert "sk-ant-...1234" in labels
     assert "sk-ant-ABCDEFGHIJKLMNOP1234" not in labels
+
+
+def test_trace_command_exports_enriched_console(tmp_path):
+    from typer.testing import CliRunner
+
+    from agon.analysis import latest_run
+    from agon.cli import app
+
+    runner = CliRunner()
+    logs = tmp_path / "logs"
+    run = runner.invoke(
+        app,
+        ["run", str(_FIXTURE_MINI), "--log-dir", str(logs),
+         "--report-dir", str(tmp_path / "r"), "--display", "none"],
+    )
+    assert run.exit_code in (0, 1), run.output
+    run_id = latest_run(str(logs)).eval.run_id
+    result = runner.invoke(app, ["trace", run_id, "--log-dir", str(logs), "--backend", "console"])
+    assert result.exit_code == 0, result.output
+    assert "exported" in result.output

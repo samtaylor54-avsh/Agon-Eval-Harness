@@ -16,7 +16,7 @@ import anyio
 import typer
 from pydantic import ValidationError
 
-from agon.analysis import compare_runs, find_run
+from agon.analysis import compare_runs, digest, find_run
 from agon.calibrate import load_calibration_set, run_calibration
 from agon.config import load_env, load_run_config
 from agon.dataset import DatasetValidationError, load_dataset
@@ -421,6 +421,8 @@ def trace(
         typer.echo(f"[abort] {exc}", err=True)
         raise typer.Exit(ABORT) from exc
 
+    d = digest(log)
+
     if backend == "console":
         tracer = console_tracer()
     elif backend == "langsmith":
@@ -434,7 +436,7 @@ def trace(
         typer.echo(f"[abort] unknown backend {backend!r}", err=True)
         raise typer.Exit(ABORT)
 
-    count = export_eval_log(log, tracer)
+    count = export_eval_log(log, tracer, digest=d)
     typer.echo(f"exported {count} spans to {backend}")
 
 
