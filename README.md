@@ -262,6 +262,7 @@ uv run agon retrieve examples/retrieval/corpus.yaml examples/retrieval/qrels.yam
 uv sync --extra otel
 uv run agon trace <run_id> --backend console
 #    → or --backend langsmith / --backend otlp (Grafana Tempo). See docs/observability.md
+#    → See docs/langsmith-dashboards.md for building LangSmith dashboards from enriched eval traces.
 
 # 9. Run the offline OWASP adversarial suite (4 attacks caught, 4 controls pass).
 uv run python examples/adversarial_quickstart.py

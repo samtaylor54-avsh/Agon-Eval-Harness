@@ -18,10 +18,27 @@ from opentelemetry import trace as otrace
 from opentelemetry.trace import Status, StatusCode
 
 from agon.observability.semconv import (
+    AGON_CATEGORY,
+    AGON_COMPOSITE_SCORE,
+    AGON_COST_INPUT_TOKENS,
+    AGON_COST_OUTPUT_TOKENS,
+    AGON_COST_TOTAL_TOKENS,
+    AGON_COST_USD,
+    AGON_DATASET_VERSION,
+    AGON_ERROR_CATEGORY,
+    AGON_ERROR_COUNT,
+    AGON_ERROR_COUNT_PREFIX,
+    AGON_FAILURE_LABELS,
+    AGON_N_CASES,
+    AGON_OVERALL_PASS_RATE,
+    AGON_PASSED,
+    AGON_RECOMMENDATION,
+    AGON_RISK_LEVEL,
     AGON_RUN_ID,
     AGON_SAMPLE_ID,
     AGON_SCORE_VALUE,
     AGON_SCORER,
+    AGON_SYSTEM_VERSION,
     AGON_TASK,
     GEN_AI_AGENT_NAME,
     GEN_AI_OPERATION_NAME,
@@ -106,7 +123,51 @@ def _emit_score(tracer: Any, ctx: Any, e: Any) -> int:
 _EMITTERS = {"model": _emit_model, "tool": _emit_tool, "score": _emit_score}
 
 
-def export_eval_log(log: Any, tracer: Any) -> int:
+def _run_outcome_attrs(d: Any) -> dict[str, Any]:
+    """Run-level scalar attributes from a RunDigest. recommendation uses default thresholds."""
+    # lazy: importing agon.reporting pulls in inspect_ai (~1s); defer until digest= is actually used
+    from agon.reporting.generator import recommend
+    from agon.schemas import RunConfig
+
+    cfg = RunConfig()
+    rec = recommend(
+        d, None, pass_threshold=cfg.pass_threshold, investigate_threshold=cfg.investigate_threshold
+    )
+    attrs: dict[str, Any] = {
+        AGON_OVERALL_PASS_RATE: float(d.overall_pass_rate),
+        AGON_N_CASES: int(d.n_cases),
+        AGON_ERROR_COUNT: int(d.error_count),
+        AGON_RECOMMENDATION: rec.value,
+        AGON_COST_USD: float(d.cost.total_usd),
+        AGON_COST_INPUT_TOKENS: int(d.cost.usage.input),
+        AGON_COST_OUTPUT_TOKENS: int(d.cost.usage.output),
+        AGON_COST_TOTAL_TOKENS: int(d.cost.usage.total),
+    }
+    for category, count in d.error_count_by_category.items():
+        attrs[AGON_ERROR_COUNT_PREFIX + category] = int(count)
+    if d.system_version:
+        attrs[AGON_SYSTEM_VERSION] = redact(str(d.system_version))
+    if d.dataset_version:
+        attrs[AGON_DATASET_VERSION] = redact(str(d.dataset_version))
+    return attrs
+
+
+def _sample_outcome_attrs(rec: Any) -> dict[str, Any]:
+    """Per-sample scalar attributes from a SampleRecord. Free-text strings are redacted."""
+    attrs: dict[str, Any] = {
+        AGON_PASSED: bool(rec.passed),
+        AGON_COMPOSITE_SCORE: float(rec.composite_score),
+        AGON_CATEGORY: redact(str(rec.category)),
+        AGON_RISK_LEVEL: redact(str(rec.risk_level)),
+    }
+    if rec.error_category:
+        attrs[AGON_ERROR_CATEGORY] = str(rec.error_category)
+    if rec.detected_failure_labels:
+        attrs[AGON_FAILURE_LABELS] = [redact(label) for label in rec.detected_failure_labels]
+    return attrs
+
+
+def export_eval_log(log: Any, tracer: Any, *, digest: Any = None) -> int:
     """Emit the eval log as GenAI spans through ``tracer``. Returns the span count."""
     samples = log.samples or []
     first_ts = _ns(samples[0].events[0].timestamp) if (samples and samples[0].events) else None
@@ -119,6 +180,9 @@ def export_eval_log(log: Any, tracer: Any) -> int:
     }
     if log.eval.model:
         run_attrs[GEN_AI_REQUEST_MODEL] = log.eval.model
+    if digest is not None:
+        run_attrs.update(_run_outcome_attrs(digest))
+    records = digest.record_map() if digest is not None else {}
     run_span = tracer.start_span(
         f"eval {log.eval.task}", start_time=run_start, attributes=run_attrs
     )
@@ -129,15 +193,19 @@ def export_eval_log(log: Any, tracer: Any) -> int:
     for sample in samples:
         events = sample.events or []
         s_start = _ns(events[0].timestamp) if events else run_start
+        sample_attrs = {
+            GEN_AI_OPERATION_NAME: OP_INVOKE_AGENT,
+            GEN_AI_AGENT_NAME: str(sample.id),
+            AGON_SAMPLE_ID: str(sample.id),
+        }
+        rec = records.get(str(sample.id))
+        if rec is not None:
+            sample_attrs.update(_sample_outcome_attrs(rec))
         sample_span = tracer.start_span(
             f"invoke_agent {sample.id}",
             context=run_ctx,
             start_time=s_start,
-            attributes={
-                GEN_AI_OPERATION_NAME: OP_INVOKE_AGENT,
-                GEN_AI_AGENT_NAME: str(sample.id),
-                AGON_SAMPLE_ID: str(sample.id),
-            },
+            attributes=sample_attrs,
         )
         spans += 1
         s_ctx = otrace.set_span_in_context(sample_span)
