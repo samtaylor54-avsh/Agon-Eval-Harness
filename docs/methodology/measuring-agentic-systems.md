@@ -163,3 +163,19 @@ The *agon* was never about destruction. The contest is designed to draw out what
 That is what the harness is for. Not to produce a number that validates a launch decision, but to build an opponent rigorous enough that surviving it means something. Through *agon*, a system becomes more than it was — not by being shielded from the hardest questions, but by having been made to answer them.
 
 ## Reproduce Every Claim
+
+Every figure in this essay was produced offline, on the default path, with no API key and no model
+download. Each row below regenerates the evidence behind a principle. Run them from the repository
+root after `uv sync`.
+
+| Principle | Claim reproduced | Command |
+|---|---|---|
+| Adversarial | 4/4 attacks caught, `50% of cases safe -> FAIL` | `uv run python examples/adversarial_quickstart.py` |
+| Multi-dimensional | `85.0% [64.0%, 94.8%]` headline hides `structured_output` at 50.0% | `uv run python examples/quickstart.py` |
+| Multi-dimensional | retrieval recall@5 / MRR / nDCG, scored in isolation | `uv sync --extra retrieval && uv run agon retrieve examples/retrieval/corpus.yaml examples/retrieval/qrels.yaml --k 5` |
+| Asymmetric | 9/10 pass (0.9), yet FAIL on the one CRITICAL miss | `uv run pytest tests/test_gait_triage.py -k critical_miss_alone -v` (demo: `uv run python examples/gait_triage/run.py`) |
+| Calibrated | judge validated by Cohen's kappa + a `min_kappa` gate | `uv run pytest tests/test_calibrate.py tests/test_stats.py -k kappa -v` |
+| Statistical | `0/20` -> `0.0% [0.0%, 16.1%]` + small-sample note | `uv run agon run examples/datasets/rag_smoke.yaml --display none` |
+| Reproducible | offline `$0.0000`, real tokens (846), deterministic exit code | `uv run agon run examples/datasets/rag_smoke.yaml --display none` |
+| Reproducible | OpenTelemetry GenAI trace export | `uv sync --extra otel && uv run agon trace <run_id> --backend console` |
+| Continuous | resume re-runs only failed/incomplete cases | `uv run agon resume --latest --display none` |
