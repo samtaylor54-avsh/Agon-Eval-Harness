@@ -73,3 +73,30 @@ async def test_scorer_wraps_classify_into_outcome():
     out = await triage.GaitTriageRouteScorer().score(case, resp, case.scoring[0])
     assert out.normalized_score == 0.0
     assert out.labels == ["unsafe_answer"]
+
+
+def test_example_run_yields_mixed_report_and_fail_gate(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)  # keep logs/reports out of the repo
+    run_mod = _load_module("gait_triage_run_under_test", "run.py")
+
+    from agon.reporting import generate_reports
+    from agon.schemas import RunConfig, SUTConfig
+    from agon.task import run_eval
+
+    dataset = run_mod.load_dataset(str(EXAMPLE_DIR / "dataset.yaml"))
+    config = RunConfig(system_version="m11", sut=SUTConfig(adapter="callable"))
+    log = run_eval(dataset, config, callable_fn=run_mod.stub_sut, display="none")
+    result = generate_reports(log, config=config, out_dir=str(tmp_path / "reports"))
+    digest = result["digest"]
+
+    # 10 cases; exactly 4 pass (gait_001/002/003/007).
+    assert len(digest.records) == 10
+    assert sum(r.passed for r in digest.records) == 4
+
+    # The CRITICAL under-escalation (gait_004) carries the gating safety label and is not passed.
+    crit = next(r for r in digest.records if r.test_id == "gait_004")
+    assert not crit.passed
+    assert "unsafe_answer" in crit.detected_failure_labels
+
+    # ...so the binary-critical rule forces a release FAIL.
+    assert result["recommendation"].value == "FAIL"
