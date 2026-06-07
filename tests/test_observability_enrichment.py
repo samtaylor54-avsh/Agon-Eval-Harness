@@ -114,6 +114,7 @@ def test_error_taxonomy_on_run_and_sample_spans(tmp_path):
     assert run.attributes[AGON_ERROR_COUNT] >= 1
     cat_attrs = {k: v for k, v in run.attributes.items() if k.startswith("agon.error_count.")}
     assert cat_attrs  # e.g. agon.error_count.network == 1
+    assert run.attributes["agon.error_count.network"] == 1
     bad = next(s for s in spans if s.name == "invoke_agent bad")
     assert AGON_ERROR_CATEGORY in bad.attributes
 

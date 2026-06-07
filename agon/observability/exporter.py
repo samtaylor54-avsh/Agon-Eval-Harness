@@ -182,7 +182,7 @@ def export_eval_log(log: Any, tracer: Any, *, digest: Any = None) -> int:
         run_attrs[GEN_AI_REQUEST_MODEL] = log.eval.model
     if digest is not None:
         run_attrs.update(_run_outcome_attrs(digest))
-    records = {r.test_id: r for r in digest.records} if digest is not None else {}
+    records = digest.record_map() if digest is not None else {}
     run_span = tracer.start_span(
         f"eval {log.eval.task}", start_time=run_start, attributes=run_attrs
     )
