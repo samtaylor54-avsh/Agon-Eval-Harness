@@ -116,6 +116,18 @@ We report the interval. We flag the small samples. We test regression claims aga
 
 ## The Record II: measurement is reproducible
 
+The previous principle was honesty about uncertainty — a score without an interval is a number without a margin. This one is the paired obligation: honesty about provenance. A result no one else can reproduce is not a record of a contest. It is hearsay with a decimal attached.
+
+The stated bar is concrete: a reviewer can clone the repository and reproduce the runs in under twenty minutes. That is not a marketing aspiration — it is an engineering constraint, and it shapes how the default path is built. Every component that requires an account, an API key, or a model download is an obstacle to independent verification. The offline path removes those obstacles by design. The system under test is replaced with a deterministic mock — `mockllm` — that requires nothing external and returns the same outputs on every machine without installation or registration. A reviewer with no cloud credentials, anywhere, can reproduce the run and get the same report.
+
+"Offline" does not mean "fake." When the harness runs `examples/datasets/rag_smoke.yaml` against `mockllm`, it still meters every token the mock provider exchanges: `186` input tokens, `660` output tokens, `846` total. The estimated cost is `$0.0000` — accurate, because the mock provider is free — not because the harness has decided to ignore token accounting when it is inconvenient. The cost is reported as zero because it is zero, not because it is being hidden. A harness that skips cost reporting in offline mode has not made the run cheaper; it has made the record dishonest.
+
+The same discipline applies to reproducibility across time. Exit codes are deterministic: `agon run` returns `0` for PASS, `1` for FAIL, and `2` for abort, and that contract does not change between runs. That stability is what allows evaluation to sit in a CI pipeline and break the build on regression rather than relying on a human to open a dashboard and decide whether a shift matters. A gate that only fires when someone notices is not a gate; it is a reminder. An exit code that returns `1` and halts the pipeline is a gate.
+
+For cases where the score alone is not enough — where a failure looks surprising and the aggregate does not explain it — any run can be exported as OpenTelemetry GenAI spans via `agon trace <run_id> --backend console`. Each model call, its inputs, its outputs, the scoring decision at each step. Not an interpretation of what happened; the thing that happened. A score you cannot interrogate is a verdict without evidence.
+
+Reproducibility and tracing together are what convert "trust me" into "run it yourself." The offline path means any reviewer can generate the same report from the same inputs. The deterministic exit codes mean any CI system can act on the result automatically. The trace export means any failure can be followed back to the moment it occurred. A measurement is only as trustworthy as the record it leaves behind.
+
 ## The Transformation: measurement is continuous
 
 ## Through Agon
