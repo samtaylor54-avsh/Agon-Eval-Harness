@@ -37,6 +37,7 @@ from agon.observability.semconv import (
     OP_INVOKE_AGENT,
     OP_INVOKE_WORKFLOW,
 )
+from agon.secrets import redact
 
 _MIN_DUR_NS = 1_000_000  # 1ms span for point-in-time events
 
@@ -50,9 +51,8 @@ def _ns(ts: Any) -> int:
 
 
 def _strval(value: Any) -> str:
-    if isinstance(value, dict | list):
-        return json.dumps(value, default=str)
-    return str(value)
+    s = json.dumps(value, default=str) if isinstance(value, dict | list) else str(value)
+    return redact(s)
 
 
 def _emit_model(tracer: Any, ctx: Any, e: Any) -> int:
@@ -85,7 +85,7 @@ def _emit_tool(tracer: Any, ctx: Any, e: Any) -> int:
         f"execute_tool {name}", context=ctx, start_time=start, attributes=attrs
     )
     if getattr(e, "error", None):
-        span.set_status(Status(StatusCode.ERROR, str(e.error)))
+        span.set_status(Status(StatusCode.ERROR, redact(str(e.error))))
     span.end(end_time=end)
     return end
 

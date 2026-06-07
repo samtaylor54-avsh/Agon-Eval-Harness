@@ -18,7 +18,7 @@ from pydantic import ValidationError
 
 from agon.analysis import compare_runs, find_run
 from agon.calibrate import load_calibration_set, run_calibration
-from agon.config import load_run_config
+from agon.config import load_env, load_run_config
 from agon.dataset import DatasetValidationError, load_dataset
 from agon.reporting import generate_reports
 from agon.review import save_review
@@ -26,6 +26,7 @@ from agon.schemas import JudgeConfig, Recommendation, ReviewRecord, RunConfig
 from agon.scoring import JudgeClient, default_registry
 from agon.scoring.judge import JudgeParseError
 from agon.scoring.plugins import PluginLoadError, load_plugins
+from agon.secrets import missing_provider_keys, redact, secret_status
 from agon.sut import health_check
 from agon.task import run_eval
 
@@ -34,6 +35,25 @@ app = typer.Typer(no_args_is_help=True, add_completion=False, help="Agon Eval Ha
 ABORT = 2
 FAIL_GATE = 1
 PASS_GATE = 0
+
+
+@app.callback()
+def _load_env_callback() -> None:
+    """Load a .env at CLI entry so preflight/doctor see those keys."""
+    load_env()
+
+
+def _preflight(model: str | None, adapter: str) -> None:
+    """Abort (exit 2) if a real-provider run is missing its required API key(s)."""
+    missing = missing_provider_keys(model, adapter)
+    if missing:
+        provider = (model or "").split("/")[0]
+        typer.echo(
+            f"[abort] missing API key for provider '{provider}': {', '.join(missing)} "
+            f"(set it in your shell or a .env file)",
+            err=True,
+        )
+        raise typer.Exit(ABORT)
 
 
 def _parse_fail_on_error(value: str) -> bool | float:
@@ -166,6 +186,8 @@ def run(
         )
         raise typer.Exit(ABORT)
 
+    _preflight(cfg.sut.model, cfg.sut.adapter)
+
     if not anyio.run(health_check, cfg.sut):
         typer.echo("[abort] SUT health check failed", err=True)
         raise typer.Exit(ABORT)
@@ -256,6 +278,7 @@ def resume(
     if latest and run_id:
         typer.echo("[warn] both run_id and --latest given; using latest", err=True)
     target = None if latest else run_id
+    _preflight(cfg.sut.model, cfg.sut.adapter)
     try:
         result = resume_run(cfg, target, display=display)
     except FileNotFoundError as exc:
@@ -332,6 +355,45 @@ def report(
     typer.echo(f"recommendation: {result['recommendation'].value}")
     for path in result["written"].values():
         typer.echo(f"  wrote {path}")
+
+
+@app.command()
+def doctor(
+    model: str = typer.Option(None, "--model", help="Check keys for this provider/model"),
+    config: str = typer.Option(None, "--config", "-c", help="Show resolved config (redacted)"),
+) -> None:
+    """Report agon/Inspect versions, masked secret status, and provider-key readiness."""
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as _pkg_version
+
+    def _ver(name: str) -> str:
+        try:
+            return _pkg_version(name)
+        except PackageNotFoundError:
+            return "(unknown)"
+
+    typer.echo("agon doctor")
+    typer.echo(f"  agon:    {_ver('agon-eval-harness')}")
+    typer.echo(f"  inspect: {_ver('inspect-ai')}")
+    typer.echo("  default path: offline (mockllm; no API key required)")
+
+    typer.echo("\nsecret env vars:")
+    for var, shown in secret_status():
+        typer.echo(f"  {var}: {shown}")
+
+    if model:
+        adapter = "mockllm" if model.startswith("mockllm") else "litellm"
+        provider = model.split("/")[0]
+        missing = missing_provider_keys(model, adapter)
+        if missing:
+            typer.echo(f"\nmodel {model}: provider '{provider}' MISSING {', '.join(missing)}")
+        else:
+            typer.echo(f"\nmodel {model}: provider '{provider}' keys present")
+
+    if config:
+        cfg = load_run_config(config)
+        typer.echo("\nresolved config:")
+        typer.echo(redact(cfg.model_dump_json(indent=2)))
 
 
 @app.command()
@@ -455,6 +517,7 @@ def calibrate(
     min_kappa: float = typer.Option(0.6, "--min-kappa", help="Minimum acceptable agreement"),
 ) -> None:
     """Validate a judge scorer against human labels. Exit 1 if agreement < min-kappa."""
+    _preflight(judge_model, "mockllm" if judge_model.startswith("mockllm") else "litellm")
     try:
         cset = load_calibration_set(labeled)
     except (FileNotFoundError, ValueError) as exc:

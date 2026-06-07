@@ -23,6 +23,7 @@ from agon.retrieval.metrics import (
     recall_at_k,
     reciprocal_rank,
 )
+from agon.retrieval.report import generate_retrieval_reports
 
 
 def _bow_embed(vocab: list[str]):
@@ -167,3 +168,30 @@ def test_retrieval_eval_end_to_end(tmp_path):
     by_id = {s.id: s for s in log.samples}
     # q2's single relevant doc d3 should be retrieved → recall 1.0.
     assert by_id["q2"].scores["ir_scorer"].value["recall"] == 1.0
+
+
+def test_retrieval_reports_redact_secret_in_query_id(tmp_path):
+    """generate_retrieval_reports must mask key-prefixed tokens in both artifact surfaces."""
+    pytest.importorskip("rank_bm25")
+    corpus = _corpus()
+    # Use a key-prefixed token as the query_id; it will appear verbatim in the digest/report.
+    secret_token = "sk-ant-ABCDEFGHIJKLMNOP1234"
+    dataset = RetrievalDataset(
+        name="qrels-secret",
+        dataset_version="v",
+        cases=[
+            RetrievalCase(
+                query_id=secret_token,
+                query="emergency leave supervisor approval",
+                relevant_doc_ids=["d2", "d4"],
+            ),
+        ],
+    )
+    log = run_retrieval_eval(corpus, dataset, k=4, log_dir=str(tmp_path))
+    result = generate_retrieval_reports(log)
+    md = result["artifacts"]["retrieval.md"]
+    js = result["artifacts"]["retrieval.json"]
+    assert secret_token not in md, "raw token must be masked in retrieval.md"
+    assert secret_token not in js, "raw token must be masked in retrieval.json"
+    assert "sk-ant-...1234" in md, "masked form must appear in retrieval.md"
+    assert "sk-ant-...1234" in js, "masked form must appear in retrieval.json"

@@ -17,6 +17,7 @@ dependencies = [
     "jsonschema>=4.21",
     "rapidfuzz>=3.6",
     "rouge-score>=0.1.2",
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]

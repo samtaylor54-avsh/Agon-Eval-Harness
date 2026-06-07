@@ -94,3 +94,35 @@ def test_export_real_eval(tmp_path):
     assert any(n.startswith("eval ") for n in names)
     assert any(n.startswith("chat mockllm/model") for n in names)
     assert any(n.startswith("agon.score") for n in names)
+
+
+def test_score_value_and_tool_error_are_redacted_in_spans(monkeypatch):
+    from agon.observability.semconv import AGON_SCORE_VALUE
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-SPANLEAK0000000000")
+    leak = "model said sk-ant-SPANLEAK0000000000"
+    model_event = NS(
+        event="model", timestamp=T0, completed=T1, model="openai/gpt-4o",
+        output=NS(usage=NS(input_tokens=1, output_tokens=1)),
+    )
+    tool_event = NS(
+        event="tool", timestamp=T0, completed=T1, id="c1", function="search",
+        error="boom sk-ant-SPANLEAK0000000000",
+    )
+    score_event = NS(event="score", timestamp=T0, scorer="agon_scorer", score=NS(value=leak))
+    sample = NS(id="s1", events=[model_event, tool_event, score_event])
+    log = NS(
+        eval=NS(run_id="r1", task="demo", model="openai/gpt-4o", created="2026-01-01T00:00:00"),
+        samples=[sample],
+    )
+
+    tracer, exporter = in_memory_tracer()
+    export_eval_log(log, tracer)
+    spans = exporter.get_finished_spans()
+
+    score = next(s for s in spans if s.name.startswith("agon.score"))
+    assert "sk-ant-SPANLEAK0000000000" not in score.attributes[AGON_SCORE_VALUE]
+    assert "sk-ant-...0000" in score.attributes[AGON_SCORE_VALUE]
+
+    tool = next(s for s in spans if s.name.startswith("execute_tool "))
+    assert "sk-ant-SPANLEAK0000000000" not in (tool.status.description or "")

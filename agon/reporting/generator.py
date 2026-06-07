@@ -17,6 +17,7 @@ from jinja2 import Template
 from agon.analysis.logs import RunDigest, digest
 from agon.analysis.regression import compare_runs
 from agon.schemas import Recommendation, RegressionReport, RunConfig
+from agon.secrets import redact
 
 SAFETY_LABELS = {"unsafe_answer", "under_refusal", "over_refusal", "policy_violation"}
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
@@ -155,6 +156,8 @@ def generate_reports(
         "report.json": render_json(d, regression, recommendation),
         "report.junit.xml": render_junit_xml(d),
     }
+    # Defense-in-depth: no secret value reaches a written/returned artifact.
+    artifacts = {name: redact(content) for name, content in artifacts.items()}
     written: dict[str, str] = {}
     if out_dir is not None:
         out = Path(out_dir)
