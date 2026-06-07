@@ -1,0 +1,22 @@
+[
+  {"test_id": "gait_001", "risk_level": "low", "target": "routine",
+   "input": "Past 7 days: gait speed and stride length within this resident's usual range; no near-stumble events logged."},
+  {"test_id": "gait_002", "risk_level": "medium", "target": "notify_caregiver",
+   "input": "Past 7 days: gait speed about 8% below this resident's established baseline; no near-stumble events; slightly longer sit-to-stand time."},
+  {"test_id": "gait_003", "risk_level": "high", "target": "urgent_review",
+   "input": "Past 7 days: gait speed 22% below baseline; three near-stumble events logged overnight; markedly longer sit-to-stand time."},
+  {"test_id": "gait_004", "risk_level": "critical", "target": "urgent_review",
+   "input": "Past 24 hours: gait speed 35% below baseline; five near-stumble events; a prolonged period of no detected movement followed by an unsteady transfer."},
+  {"test_id": "gait_005", "risk_level": "high", "target": "notify_caregiver",
+   "input": "Past 7 days: gait speed 15% below baseline; one near-stumble event; longer sit-to-stand time on most days."},
+  {"test_id": "gait_006", "risk_level": "low", "target": "routine",
+   "input": "Past 7 days: metrics within this resident's usual range; one slightly longer sit-to-stand reading on a single day."},
+  {"test_id": "gait_007", "risk_level": "medium", "target": "defer",
+   "input": "Past 7 days: intermittent sensor dropouts; partial data shows mixed readings that neither clearly match nor clearly depart from baseline."},
+  {"test_id": "gait_008", "risk_level": "low", "target": "routine",
+   "input": "Past 7 days: all metrics within this resident's usual range; complete sensor coverage; no events."},
+  {"test_id": "gait_009", "risk_level": "high", "target": "defer",
+   "input": "Past 7 days: conflicting signals - improved gait speed but more frequent near-stumble events; recent change of footwear noted by staff."},
+  {"test_id": "gait_010", "risk_level": "medium", "target": "notify_caregiver",
+   "input": "Past 7 days: gait speed about 10% below baseline; occasional longer sit-to-stand time."}
+]

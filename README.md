@@ -199,7 +199,7 @@ The build is sequenced in three phases. Each ends with a public, independently r
 - [x] **Statistical rigor** — Wilson confidence intervals on pass rates, a two-proportion significance test + small-sample awareness in regression, and a Cohen's kappa CI in judge calibration; closed-form, no new dependency (M6, ADR-0007)
 - [x] **Regulated-domain eval harness** — worked gait-sensor escalation-triage suite (synthetic data); asymmetric-ordinal scorer where a CRITICAL under-escalation forces a release FAIL (M11, ADR-0012). See `examples/gait_triage/`
 - [x] **Published methodology essay** — *What We Measure When We Measure an Agentic System*: evaluation as an adversarial discipline, with every claim cashed out against the harness ([docs/methodology/measuring-agentic-systems.md](docs/methodology/measuring-agentic-systems.md))
-- [ ] Open-source contribution to `inspect_evals` or equivalent
+- [x] **Open-source contribution to `inspect_evals`** -- gait-triage eval packaged as a native Inspect `@task`, prepared for submission to the Inspect Evals Register ([agon/evals/gait_triage/](agon/evals/gait_triage/), ADR-0013)
 
 ---
 
