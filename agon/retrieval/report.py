@@ -7,6 +7,8 @@ from pathlib import Path
 
 from inspect_ai.log import EvalLog
 
+from agon.secrets import redact
+
 METRICS = ["recall", "precision", "mrr", "ndcg", "hit"]
 
 
@@ -80,6 +82,8 @@ def generate_retrieval_reports(log: EvalLog, *, out_dir: str | Path | None = Non
         "retrieval.md": render_retrieval_markdown(digest),
         "retrieval.json": json.dumps(digest, indent=2),
     }
+    # Defense-in-depth: no secret value reaches a written/returned artifact.
+    artifacts = {name: redact(content) for name, content in artifacts.items()}
     written: dict[str, str] = {}
     if out_dir is not None:
         out = Path(out_dir)

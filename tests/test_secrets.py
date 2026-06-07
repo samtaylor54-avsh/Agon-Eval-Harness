@@ -110,3 +110,20 @@ def test_redact_extra_ignores_whitespace_only_value(monkeypatch):
         monkeypatch.delenv(var, raising=False)
     text = "a    b"  # four spaces that must NOT be corrupted
     assert secrets.redact(text, extra=["   "]) == text
+
+
+def test_redact_does_not_corrupt_words_containing_sk_prefix(monkeypatch):
+    for var in secrets.KNOWN_SECRET_ENV_VARS:
+        monkeypatch.delenv(var, raising=False)
+    # "risk"/"disk" embed "sk-" but must NOT be treated as a key.
+    assert secrets.redact("risk-assessment-score-was-quite-high-abc123") == \
+        "risk-assessment-score-was-quite-high-abc123"
+    assert secrets.redact("the disk-usage-report-was-1234567890abc") == \
+        "the disk-usage-report-was-1234567890abc"
+
+
+def test_redact_still_masks_prefixed_key_after_hyphen_or_space(monkeypatch):
+    for var in secrets.KNOWN_SECRET_ENV_VARS:
+        monkeypatch.delenv(var, raising=False)
+    assert "sk-ant-...1234" in secrets.redact("build-sk-ant-ABCDEFGHIJKLMNOP1234")
+    assert "sk-ant-...1234" in secrets.redact("key: sk-ant-ABCDEFGHIJKLMNOP1234")

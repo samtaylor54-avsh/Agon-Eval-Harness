@@ -33,7 +33,8 @@ artifact-redaction. The key is unreconstructable from a prefix plus four charact
 
 ## Consequences
 
-- A committed report or exported trace is safe to share — no known key survives.
+- A committed **report** (md/json/junit) or exported **trace** is safe to share — no known key
+  survives. (The raw Inspect `.eval` log is a separate, non-redacted surface; see limitations.)
 - A missing key fails in under a second with the exact fix, not a deep provider error.
 - Redaction is defense-in-depth: today no report field carries free text (the input is not echoed
   and `SampleRecord` has no error-message field), and the realistic span vector is the score value
@@ -47,4 +48,9 @@ artifact-redaction. The key is unreconstructable from a prefix plus four charact
 - **Unmapped providers are not preflighted** — only providers in `PROVIDER_ENV` are checked. Adding a
   provider is a one-line dict entry.
 - **No secret storage** — vaults, encryption at rest, and rotation remain out of scope.
+- **The stored Inspect `.eval` log is not redacted.** Inspect owns the `.eval` serialization, which
+  echoes user-supplied config fields (e.g. `system_version`) verbatim into its `header.json`. A real
+  *env-sourced* provider key does not reach the log, but a secret deliberately placed in a config
+  field will. Reports (md/json/junit), OTel spans, and `doctor` output — the surfaces agon itself
+  serializes — are redacted. Treat raw `.eval` logs as you would raw provider logs.
 - **LangSmith dashboards** were deferred to M10 during M9 brainstorming.

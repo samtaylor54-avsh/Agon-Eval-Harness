@@ -40,7 +40,9 @@ PROVIDER_ENV: dict[str, tuple[str, ...]] = {
 _MIN_MASK_LEN = 8
 # prefix followed by >=16 chars of key body (base64/hex/url-safe).
 _PREFIX_TOKEN_RE = re.compile(
-    r"(?:" + "|".join(re.escape(p) for p in KNOWN_KEY_PREFIXES) + r")[A-Za-z0-9_\-]{16,}"
+    r"(?<![A-Za-z0-9])(?:"
+    + "|".join(re.escape(p) for p in KNOWN_KEY_PREFIXES)
+    + r")[A-Za-z0-9_\-]{16,}"
 )
 
 
