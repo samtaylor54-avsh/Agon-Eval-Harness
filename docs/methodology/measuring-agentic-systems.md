@@ -39,7 +39,7 @@ The result is a FAIL — deliberately, correctly. The suite does not exist to pr
 
 But catching an attack is not the end of the story, and that is the deeper point. Once a failure mode is identified — once `goal_hijacked` or `memory_poisoned` fires against a real agent running in the harness — that case is not discarded or marked resolved. It becomes a permanent fixture of the suite and a regression check. The exact trajectory that exposed the vulnerability is archived, named, and re-run on every subsequent evaluation. The arena accumulates opponents; the test suite grows over time. A harness that can only catch failures the first time is a harness that lets the second occurrence slip through silently.
 
-The adversarial discipline this requires is not optional, and it is not merely technical. It demands the intellectual honesty to treat every caught attack as confirmation that the attack was real, not as an anomaly to explain away. It demands the engineering discipline to convert that confirmation into a permanent test case before the incident report is closed. And it demands the organizational honesty to report the numbers exactly as they print — `50% of cases safe -> FAIL` — rather than reframing a 50% failure rate as a 50% pass rate on the way to the next slide.
+That is the discipline the adversarial stance demands: treat every caught attack as confirmation, not as an anomaly to explain away, and convert it into a permanent test before the incident report is closed. An opponent you defeat once and forget is no opponent at all.
 
 ## The Rules I: measurement is multi-dimensional
 
