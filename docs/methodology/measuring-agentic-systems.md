@@ -43,6 +43,20 @@ That is the discipline the adversarial stance demands: treat every caught attack
 
 ## The Rules I: measurement is multi-dimensional
 
+A single pass rate is a lie — a truth told so partially it becomes a lie in practice. A system has many ways to be right and many more to be wrong, and they do not cancel out into one percentage. When you collapse them, you do not get a summary; you get a hiding place. The aggregate conceals exactly where the system is failing, and the failures that matter most are often the ones most reliably swallowed by the average.
+
+Consider what the harness actually reports on a standard offline run. The headline reads: **85.0% [64.0%, 94.8%] (17/20), Recommendation: INVESTIGATE**. That number is technically accurate. A reasonable person glancing at a dashboard could read it as reassuring — 85% passing, confidence interval above 64%, only three failures. But break it down by category and the picture changes immediately. The `classification`, `smoke`, and `summarization` categories all pass at **100.0%**, and those results are doing most of the arithmetic. Meanwhile, `structured_output` passes at **50.0%** and `robustness` at **66.7%**. The aggregate does not report 50%; it buries 50% beneath the categories that happened to perform well.
+
+The per-risk breakdown compounds this. High-risk cases pass at **66.7%**. These are not equivalent to low-risk misses — they are the cases where failure costs the most. The aggregate treats a high-risk failure and a low-risk success as interchangeable items in a ratio. They are not. The headline's 85.0% is anchored by the easy cases; the hard and consequential ones are the ones it is hiding.
+
+The harness is built around a framework of **seven evaluation categories tracked distinctly**: Functional Correctness, Tool Use, Planning, State Management, Robustness, Reliability, and Safety. These are not the column headers in any single report — they are the conceptual architecture that determines what must be measured independently and what cannot be averaged away. The per-category and per-risk breakdowns are the practical expression of that principle: refuse the single number, and `structured_output` at 50.0% becomes visible when the headline would have buried it.
+
+The same logic applies with even more force to the separation between retrieval and generation in a RAG system. A pipeline that produces poor answers has two distinct failure modes: the retriever returned wrong content, or the model generated a bad answer despite correct content. These call for different diagnoses and different fixes. If retrieval recall and answer quality share a score, you cannot tell which failure you have.
+
+The retrieval evaluation runs on its own axes: `hr_policy_qrels [bm25]: recall@5=1.000 MRR=0.969 nDCG@5=0.967 hit@5=1.000`. These are not components of some larger answer-quality score; they are self-contained evidence about the retriever's behavior, measured at the boundary where retrieval hands off to generation. When the harness flags a RAG failure — a case like `rag_020`, failed for `missing_citation` — you can ask whether retrieval was complete before asking whether generation was accurate. Isolation is what makes the failure legible.
+
+Collapse is a form of concealment, and measurement is only useful if it preserves the distinctions you might need to act on. The contestant in the arena does not improve by being told they scored well overall. They improve by learning which event broke down, at what moment, and why. Multi-dimensional measurement is not completeness for its own sake; it is the minimum resolution at which the data becomes actionable.
+
 ## The Rules II: measurement is asymmetric
 
 ## The Judges: measurement must be calibrated
