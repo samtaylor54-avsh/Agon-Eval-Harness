@@ -102,6 +102,18 @@ The referee in a contest must be credentialed, not assumed. The credential here 
 
 ## The Record I: measurement is statistical
 
+A pass rate is an estimate, not a fact. It is the output of a sample drawn from a distribution, and like any sample statistic it carries uncertainty — uncertainty that belongs in the record whether we find it convenient to report it or not. A score presented without a measure of its own uncertainty is not a clean result; it is an invitation to false confidence on the way up and false alarm on the way down. The record of the contest must include how sure we are of it.
+
+The harness makes this concrete on every run. Consider what the offline smoke suite reports against a bare mock SUT that fails every case: **0.0% [0.0%, 16.1%] (0/20)**. The point estimate is exactly zero — the bottom of the scale, nothing passing. The interval corrects that reading immediately. The Wilson upper bound reaches **16.1%** on twenty cases. With n=20, the true failure rate could plausibly be as high as roughly one-in-six. Zero failures observed does not mean zero failure rate; it means we do not yet have the evidence to rule one out, and the interval tells us precisely how wide that gap is.
+
+The harness also prints an explicit small-sample warning alongside that result: `Small sample (n=20 < 30): treat pass rates and intervals with caution.` The warning is not decorative. A single case swinging from fail to pass in a twenty-case run moves the point estimate by five percentage points. React to that as a meaningful signal and you are not measuring — you are guessing at noise. The flag enforces the discipline of asking whether any observed movement is real before treating it as evidence.
+
+This discipline runs through the full evaluation workflow. The harness puts Wilson confidence intervals on every pass rate, so uncertainty is always visible. When two runs are compared, a two-proportion significance test determines whether the movement between them is real or simply expected variation between draws from the same distribution. A drop from 0.85 to 0.82 might be genuine regression; it might be a different unlucky draw from the same underlying system. The test separates those cases. Without it, the natural response is to investigate every downward tick and ignore every upward one — which is not measurement; it is superstition dressed in a spreadsheet.
+
+A score reported to three decimal places, on twenty cases, with no interval and no sample-size warning, is not precise. It is false precision, and false precision is worse than acknowledged uncertainty because it forecloses the questions you should still be asking. A confidence interval is not statistical decoration. It is the part of the result that tells you whether to act — whether the spread is narrow enough to trust, whether you need more cases before drawing a conclusion, whether the shift between runs is real enough to justify a rollback.
+
+We report the interval. We flag the small samples. We test regression claims against chance. These are the minimum conditions under which a pass rate means anything at all.
+
 ## The Record II: measurement is reproducible
 
 ## The Transformation: measurement is continuous
