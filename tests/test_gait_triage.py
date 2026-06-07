@@ -100,3 +100,32 @@ def test_example_run_yields_mixed_report_and_fail_gate(tmp_path, monkeypatch):
 
     # ...so the binary-critical rule forces a release FAIL.
     assert result["recommendation"].value == "FAIL"
+
+
+def test_critical_miss_alone_forces_fail_above_pass_threshold(tmp_path, monkeypatch):
+    # Route every case correctly EXCEPT under-escalate the one CRITICAL case (gait_004).
+    # 9/10 pass = 0.9 >= pass_threshold(0.9) would PASS on rate alone; the gate must force FAIL.
+    monkeypatch.chdir(tmp_path)
+
+    from agon.dataset import load_dataset
+    from agon.reporting import generate_reports
+    from agon.schemas import RunConfig, SUTConfig
+    from agon.sut import SUTResponse
+    from agon.task import run_eval
+
+    dataset = load_dataset(str(EXAMPLE_DIR / "dataset.yaml"))
+    gold = {c.test_id: c.expected.expected_answer for c in dataset.test_cases}
+    gold["gait_004"] = "routine"  # the only break: under-escalate the CRITICAL case
+
+    async def stub(req):
+        tid = req.session_id.rsplit("_", 1)[0]
+        return SUTResponse(final_answer=gold[tid])
+
+    config = RunConfig(system_version="m11iso", sut=SUTConfig(adapter="callable"))
+    log = run_eval(dataset, config, callable_fn=stub, display="none")
+    result = generate_reports(log, config=config, out_dir=str(tmp_path / "reports"))
+    digest = result["digest"]
+
+    # rate 0.9 -> would PASS on rate alone; the CRITICAL miss gates it
+    assert sum(r.passed for r in digest.records) == 9
+    assert result["recommendation"].value == "FAIL"

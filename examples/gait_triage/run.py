@@ -61,7 +61,10 @@ def main() -> None:
         f"{dataset.name}: {passed}/{len(digest.records)} passed "
         f"-> {result['recommendation'].value}"
     )
-    print("  (the CRITICAL under-escalation gait_004 forces FAIL via the binary-critical rule)")
+    print(
+        "  (the CRITICAL under-escalation gait_004 would force FAIL"
+        " even if every other case passed)"
+    )
     for path in result["written"].values():
         print(f"  wrote {path}")
 
