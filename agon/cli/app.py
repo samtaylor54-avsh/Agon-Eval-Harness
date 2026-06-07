@@ -36,6 +36,29 @@ FAIL_GATE = 1
 PASS_GATE = 0
 
 
+@app.callback()
+def _load_env_callback() -> None:
+    """Load a .env at CLI entry so preflight/doctor see those keys."""
+    from agon.config import load_env
+
+    load_env()
+
+
+def _preflight(model: str | None, adapter: str) -> None:
+    """Abort (exit 2) if a real-provider run is missing its required API key(s)."""
+    from agon.secrets import missing_provider_keys
+
+    missing = missing_provider_keys(model, adapter)
+    if missing:
+        provider = (model or "").split("/")[0]
+        typer.echo(
+            f"[abort] missing API key for provider '{provider}': {', '.join(missing)} "
+            f"(set it in your shell or a .env file)",
+            err=True,
+        )
+        raise typer.Exit(ABORT)
+
+
 def _parse_fail_on_error(value: str) -> bool | float:
     low = value.strip().lower()
     if low in ("true", "false"):
@@ -166,6 +189,8 @@ def run(
         )
         raise typer.Exit(ABORT)
 
+    _preflight(cfg.sut.model, cfg.sut.adapter)
+
     if not anyio.run(health_check, cfg.sut):
         typer.echo("[abort] SUT health check failed", err=True)
         raise typer.Exit(ABORT)
@@ -256,6 +281,7 @@ def resume(
     if latest and run_id:
         typer.echo("[warn] both run_id and --latest given; using latest", err=True)
     target = None if latest else run_id
+    _preflight(cfg.sut.model, cfg.sut.adapter)
     try:
         result = resume_run(cfg, target, display=display)
     except FileNotFoundError as exc:
@@ -455,6 +481,7 @@ def calibrate(
     min_kappa: float = typer.Option(0.6, "--min-kappa", help="Minimum acceptable agreement"),
 ) -> None:
     """Validate a judge scorer against human labels. Exit 1 if agreement < min-kappa."""
+    _preflight(judge_model, "mockllm" if judge_model.startswith("mockllm") else "litellm")
     try:
         cset = load_calibration_set(labeled)
     except (FileNotFoundError, ValueError) as exc:
