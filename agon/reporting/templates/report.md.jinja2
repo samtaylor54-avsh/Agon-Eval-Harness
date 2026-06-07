@@ -23,6 +23,9 @@
 {% if d.top_failure_labels %}## Top failure modes
 {% for label, count in d.top_failure_labels %}- {{ label }}: {{ count }}
 {% endfor %}{% endif %}
+{% if d.error_count_by_category %}## Errors by category
+{% for cat, count in d.error_count_by_category.items() %}- {{ cat }}: {{ count }}
+{% endfor %}{% endif %}
 {% if regression %}## Regression vs `{{ regression.baseline_run_id }}`
 - Regression detected: **{{ "YES" if regression.regression_detected else "no" }}**
 - New failures: {{ regression.new_failures | join(", ") or "none" }}

@@ -271,6 +271,11 @@ uv run python examples/adversarial_quickstart.py
 uv run python examples/text_to_sql/run.py        # offline: 4/6 pass (equivalent SQL passes, wrong/malformed fail)
 uv run agon run --plugin examples/text_to_sql/sql_scorer.py examples/text_to_sql/dataset.yaml --display none
 #    -> custom `sql_result_match` scorer compares result rows, not SQL strings
+
+# 11. Resume a prior run — re-runs only failed/incomplete cases and merges into a fresh report.
+uv run agon resume <run_id> --display none
+#    -> or: agon resume --latest   (picks the most recent run automatically)
+#    -> exits 0 with "nothing to resume" if all cases in the prior run completed
 ```
 
 To evaluate a **real** system, point the SUT and judge at a provider via a run config
@@ -285,14 +290,14 @@ To evaluate a **real** system, point the SUT and judge at a provider via a run c
 | `dataset/` | YAML→`Sample` loader, content-addressed `dataset_version` |
 | `sut/` | SUT adapters: `mockllm` (offline), `callable`, `http` |
 | `scoring/` | 11 scorers (exact/keyword/citation/rubric/safety/RAG…) + composite + flake reducers |
-| `analysis/` | Eval-log digests + regression comparator |
+| `analysis/` | Eval-log digests + regression comparator; errors broken down by category (`timeout` / `resource` / `network` / `scorer` / `sample`) via `error_count_by_category`; dataset cases may set `sample_time_limit` for a per-case timeout independent of the run-level default |
 | `reporting/` | Markdown / JSON / JUnit-XML + PASS/FAIL/INVESTIGATE recommendation |
 | `calibrate/` | Judge-vs-human agreement (Cohen's κ) |
 | `retrieval/` | Isolated retrieval evals — BM25 + LanceDB + RRF hybrid, recall@k/MRR/nDCG/hit@k (Phase 2 M1) |
 | `sut/` (agent) | Native ReAct agent SUT + message→trajectory normalization; experimental LangGraph bridge (Phase 2 M2) |
 | `scoring/` (agent) | `tool_use` / `planning` / `step_efficiency` trajectory scorers (Phase 2 M2) |
 | `observability/` | Export eval runs as OpenTelemetry GenAI spans → console / LangSmith / Tempo (Phase 2 M3) |
-| `cli/` | `agon run · compare · report · review · calibrate · retrieve · trace` |
+| `cli/` | `agon run · resume · compare · report · review · calibrate · retrieve · trace` |
 
 > Note: the **Repository Structure (Target)** above is the long-term Phase 2/3 layout. The
 > shipped MVP lives under `agon/` with `examples/` and `tests/`.

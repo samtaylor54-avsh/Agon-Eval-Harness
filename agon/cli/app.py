@@ -1,6 +1,6 @@
 """``agon`` command-line interface (PRD §26 Task 11).
 
-Commands: ``run``, ``compare``, ``report``, ``review``, ``calibrate``.
+Commands: ``run``, ``resume``, ``compare``, ``report``, ``review``, ``calibrate``.
 
 Exit codes (CI gating):
   0 — pass gate (recommendation PASS and no regression)
@@ -190,6 +190,92 @@ def run(
     for path in result["written"].values():
         typer.echo(f"  wrote {path}")
 
+    regressed = regression is not None and regression.regression_detected
+    if rec is Recommendation.PASS and not regressed:
+        raise typer.Exit(PASS_GATE)
+    raise typer.Exit(FAIL_GATE)
+
+
+@app.command()
+def resume(
+    run_id: str = typer.Argument(None, help="Run id to resume (default: latest in --log-dir)"),
+    config: str = typer.Option(None, "--config", "-c", help="Run config (.toml/.yaml/.json)"),
+    log_dir: str = typer.Option(None, "--log-dir"),
+    report_dir: str = typer.Option(None, "--report-dir"),
+    display: str = typer.Option("plain", "--display", help="Inspect display: plain|rich|none"),
+    latest: bool = typer.Option(False, "--latest", help="Resume the most recent run"),
+    plugin: list[str] = typer.Option(  # noqa: B008
+        [], "--plugin", "-p", help="Import a scorer module (dotted name or .py path) before running"
+    ),
+    max_retries: int = typer.Option(None, "--max-retries", help="Per-request retry count"),
+    request_timeout: int = typer.Option(
+        None, "--request-timeout", help="Whole-request timeout (s)"
+    ),
+    attempt_timeout: int = typer.Option(
+        None, "--attempt-timeout", help="Per-attempt timeout (s)"
+    ),
+    retry_on_error: int = typer.Option(None, "--retry-on-error", help="Per-sample retry count"),
+    sample_time_limit: int = typer.Option(
+        None, "--sample-time-limit", help="Per-sample time limit (s)"
+    ),
+    fail_on_error: str = typer.Option(
+        None, "--fail-on-error", help="true|false or error-rate 0..1"
+    ),
+) -> None:
+    """Re-run the failed/incomplete cases of a prior run and emit a merged report."""
+    from agon.task.resume import resume_run
+
+    cfg = load_run_config(config) if config else RunConfig()
+    if log_dir:
+        cfg.log_dir = log_dir
+    if report_dir:
+        cfg.report_dir = report_dir
+
+    try:
+        _apply_resilience_flags(
+            cfg,
+            max_retries=max_retries,
+            request_timeout=request_timeout,
+            attempt_timeout=attempt_timeout,
+            retry_on_error=retry_on_error,
+            sample_time_limit=sample_time_limit,
+            fail_on_error=fail_on_error,
+        )
+    except (ValueError, ValidationError) as exc:
+        typer.echo(f"[abort] invalid resilience flag: {exc}", err=True)
+        raise typer.Exit(ABORT) from exc
+
+    try:
+        loaded = load_plugins(plugin)
+    except PluginLoadError as exc:
+        typer.echo(f"[abort] {exc}", err=True)
+        raise typer.Exit(ABORT) from exc
+    if loaded:
+        typer.echo(f"loaded plugin scorers: {', '.join(loaded)}")
+
+    if latest and run_id:
+        typer.echo("[warn] both run_id and --latest given; using latest", err=True)
+    target = None if latest else run_id
+    try:
+        result = resume_run(cfg, target, display=display)
+    except FileNotFoundError as exc:
+        typer.echo(f"[abort] {exc}", err=True)
+        raise typer.Exit(ABORT) from exc
+
+    if result["resumed"] == 0:
+        typer.echo("nothing to resume: all cases completed in the prior run")
+        raise typer.Exit(PASS_GATE)
+
+    d = result["digest"]
+    rec: Recommendation = result["recommendation"]
+    typer.echo(
+        f"\nresumed {result['resumed']} case(s): pass {d.overall_pass_rate * 100:.1f}% "
+        f"({sum(r.passed for r in d.records)}/{len(d.records)})  -> {rec.value}"
+    )
+    for path in result["written"].values():
+        typer.echo(f"  wrote {path}")
+
+    regression = result["regression"]
     regressed = regression is not None and regression.regression_detected
     if rec is Recommendation.PASS and not regressed:
         raise typer.Exit(PASS_GATE)

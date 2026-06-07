@@ -3,6 +3,7 @@
 from agon.analysis.logs import (
     RunDigest,
     SampleRecord,
+    build_digest,
     digest,
     find_run,
     latest_run,
@@ -14,6 +15,7 @@ from agon.analysis.regression import compare_digests, compare_runs
 __all__ = [
     "RunDigest",
     "SampleRecord",
+    "build_digest",
     "compare_digests",
     "compare_runs",
     "digest",

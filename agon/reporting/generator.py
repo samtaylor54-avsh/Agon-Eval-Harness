@@ -96,6 +96,7 @@ def render_json(
         "pass_rate_by_risk": d.pass_rate_by_risk,
         "top_failure_labels": d.top_failure_labels,
         "error_count": d.error_count,
+        "error_count_by_category": d.error_count_by_category,
         "cost": d.cost.model_dump(),
         "recommendation": recommendation.value,
         "results": [r.model_dump() for r in d.records],
@@ -109,7 +110,7 @@ def render_junit_xml(d: RunDigest) -> str:
         "testsuite",
         name=d.task,
         tests=str(len(d.records)),
-        failures=str(sum(1 for r in d.records if not r.passed)),
+        failures=str(sum(1 for r in d.records if not r.passed and not r.errored)),
         errors=str(d.error_count),
     )
     for r in d.records:
@@ -117,7 +118,7 @@ def render_junit_xml(d: RunDigest) -> str:
             suite, "testcase", classname=r.category, name=r.test_id, time="0"
         )
         if r.errored:
-            err = ET.SubElement(case, "error", message="scorer error")
+            err = ET.SubElement(case, "error", message=r.error_category or "error")
             err.text = ", ".join(r.detected_failure_labels)
         elif not r.passed:
             fail = ET.SubElement(

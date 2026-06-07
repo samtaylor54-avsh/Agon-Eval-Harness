@@ -22,6 +22,7 @@ uv sync --extra retrieval && uv run agon retrieve examples/retrieval/corpus.yaml
 uv run agon trace <run_id> --backend console   # export a run as OpenTelemetry spans (needs [otel] extra)
 uv run python examples/adversarial_quickstart.py  # offline OWASP adversarial suite (4 attacks caught, 4 controls pass)
 uv run agon run examples/datasets/rag_smoke.yaml --model anthropic/claude-sonnet-4-5 --fail-on-error 0.1  # real-provider run (needs [providers] + a key); see docs/running-real-evals.md
+uv run agon resume <run_id> --display none   # resume failed/incomplete cases -> merged report
 ```
 
 Key layout: `agon/{schemas,dataset,sut,scoring,analysis,reporting,calibrate,review,retrieval,task,config,cli,cost,observability,stats}`,

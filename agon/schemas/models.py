@@ -110,6 +110,7 @@ class AgonCase(BaseModel):
     failure_labels: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     repetitions: int | None = Field(default=None, ge=1)  # overrides RunConfig.epochs
+    sample_time_limit: int | None = Field(default=None, ge=1)  # per-case wall-clock cap (s)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

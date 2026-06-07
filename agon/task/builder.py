@@ -34,8 +34,8 @@ def resilience_eval_kwargs(config: RunConfig) -> dict[str, Any]:
         kwargs["timeout"] = r.request_timeout
     if r.attempt_timeout is not None:
         kwargs["attempt_timeout"] = r.attempt_timeout
-    if r.sample_time_limit is not None:
-        kwargs["time_limit"] = r.sample_time_limit
+    # sample_time_limit is enforced per-sample in the solver (so per-case overrides win),
+    # not via eval()'s global time_limit.
     return kwargs
 
 
@@ -61,7 +61,11 @@ def agon_task(
     judge: JudgeClient | None = None,
 ) -> Task:
     judge = judge or JudgeClient(config.judge)
-    solver = build_solver(config.sut, callable_fn=callable_fn)
+    solver = build_solver(
+        config.sut,
+        callable_fn=callable_fn,
+        default_time_limit=config.resilience.sample_time_limit,
+    )
     scorer = agon_scorer(judge=judge)
 
     epochs: int | Epochs = config.epochs
