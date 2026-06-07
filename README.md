@@ -198,7 +198,7 @@ The build is sequenced in three phases. Each ends with a public, independently r
 - [x] **Real-provider hardening** — resilience knobs (retries/timeouts/sample-retry/time-limit/error-rate threshold) exposed via config + CLI, plus offline-provable **cost & token observability** in reports (M5, ADR-0006); secrets-manager + live red-team pending
 - [x] **Statistical rigor** — Wilson confidence intervals on pass rates, a two-proportion significance test + small-sample awareness in regression, and a Cohen's kappa CI in judge calibration; closed-form, no new dependency (M6, ADR-0007)
 - [x] **Regulated-domain eval harness** — worked gait-sensor escalation-triage suite (synthetic data); asymmetric-ordinal scorer where a CRITICAL under-escalation forces a release FAIL (M11, ADR-0012). See `examples/gait_triage/`
-- [ ] Published methodology essay on what we measure when we measure an agentic system
+- [x] **Published methodology essay** — *What We Measure When We Measure an Agentic System*: evaluation as an adversarial discipline, with every claim cashed out against the harness ([docs/methodology/measuring-agentic-systems.md](docs/methodology/measuring-agentic-systems.md))
 - [ ] Open-source contribution to `inspect_evals` or equivalent
 
 ---
