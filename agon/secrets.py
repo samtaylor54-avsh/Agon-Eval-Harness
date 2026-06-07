@@ -54,6 +54,7 @@ def mask(value: str | None) -> str:
         return "(not set)"
     if len(value) < _MIN_MASK_LEN:
         return "***"
+    # last4 may overlap prefix chars for a very short secret, but no real key is this short.
     for prefix in KNOWN_KEY_PREFIXES:
         if value.startswith(prefix):
             return f"{prefix}...{value[-4:]}"
@@ -79,7 +80,7 @@ def redact(text: str, *, extra: Iterable[str] = ()) -> str:
     if not text:
         return text
     # Exact env-set values first, longest-first so a short value can't pre-empt a longer one.
-    candidates = secret_values() | {e for e in extra if e}
+    candidates = secret_values() | {e for e in extra if e and e.strip()}
     for secret in sorted(candidates, key=len, reverse=True):
         if secret in text:
             text = text.replace(secret, mask(secret))

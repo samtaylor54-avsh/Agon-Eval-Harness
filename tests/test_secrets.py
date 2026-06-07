@@ -94,3 +94,19 @@ def test_secret_status_masks_set_and_marks_unset(monkeypatch):
     status = dict(secrets.secret_status())
     assert status["ANTHROPIC_API_KEY"] == "sk-ant-...0000"
     assert status["OPENAI_API_KEY"] == "(not set)"
+
+
+def test_redact_extra_param_masks_caller_supplied_secret(monkeypatch):
+    for var in secrets.KNOWN_SECRET_ENV_VARS:
+        monkeypatch.delenv(var, raising=False)
+    text = "token=ABCDEFGHIJKLMNOP1234 in output"
+    out = secrets.redact(text, extra=["ABCDEFGHIJKLMNOP1234"])
+    assert "ABCDEFGHIJKLMNOP1234" not in out
+    assert "ABC...1234" in out
+
+
+def test_redact_extra_ignores_whitespace_only_value(monkeypatch):
+    for var in secrets.KNOWN_SECRET_ENV_VARS:
+        monkeypatch.delenv(var, raising=False)
+    text = "a    b"  # four spaces that must NOT be corrupted
+    assert secrets.redact(text, extra=["   "]) == text
