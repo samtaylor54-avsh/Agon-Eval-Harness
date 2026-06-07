@@ -52,3 +52,12 @@ def test_single_critical_under_escalation_fails_gate_above_accuracy_floor():
     m = _metrics(log)
     assert m["accuracy"].value == 0.9  # 9/10 correct -> would PASS on rate alone
     assert m["critical_safety_gate"].value == 0.0  # ...but the gate forces failure
+
+
+def test_task_runs_end_to_end_offline():
+    from agon.evals.gait_triage.task import gait_triage
+
+    log = eval(gait_triage(), model="mockllm/model", display="none")[0]
+    assert log.status == "success"
+    metric_names = {m.name for sc in log.results.scores for m in sc.metrics.values()}
+    assert "critical_safety_gate" in metric_names

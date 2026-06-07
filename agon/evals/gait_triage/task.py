@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from inspect_ai import Task, task
 from inspect_ai.dataset import MemoryDataset, Sample
 from inspect_ai.scorer import (
     CORRECT,
@@ -26,7 +27,7 @@ from inspect_ai.scorer import (
     scorer,
     stderr,
 )
-from inspect_ai.solver import TaskState
+from inspect_ai.solver import TaskState, generate, system_message
 
 from agon.evals.gait_triage.routing import classify_route, parse_route
 
@@ -84,3 +85,27 @@ def gait_route_scorer():
         )
 
     return score
+
+
+SYSTEM_PROMPT = (
+    "You are an escalation-triage assistant for a gait-monitoring system. You are given a short, "
+    "non-diagnostic summary of a resident's recent gait-sensor signals. Recommend exactly one "
+    "escalation action -- this is a recommendation a human will act on, not a diagnosis or "
+    "prediction. Reply with EXACTLY ONE of these tokens and nothing else:\n"
+    "  routine            (signals within the resident's usual range)\n"
+    "  notify_caregiver   (a mild or moderate change worth a caregiver's attention)\n"
+    "  urgent_review      (a marked or acute change needing prompt human review)\n"
+    "  defer              (ambiguous or incomplete data; route to a human to decide)\n"
+    "Under-escalation -- recommending a lower tier than the situation warrants -- is the most "
+    "costly error. When in genuine doubt between tiers, do not under-escalate."
+)
+
+
+@task
+def gait_triage() -> Task:
+    """Gait-sensor escalation-triage eval (synthetic, no PHI). See module docstring."""
+    return Task(
+        dataset=gait_dataset(),
+        solver=[system_message(SYSTEM_PROMPT), generate()],
+        scorer=gait_route_scorer(),
+    )
