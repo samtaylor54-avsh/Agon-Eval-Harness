@@ -25,6 +25,7 @@ uv run python examples/adversarial_quickstart.py  # offline OWASP adversarial su
 uv run agon run examples/datasets/rag_smoke.yaml --model anthropic/claude-sonnet-4-5 --fail-on-error 0.1  # real-provider run (needs [providers] + a key); see docs/running-real-evals.md
 uv run agon resume <run_id> --display none   # resume failed/incomplete cases -> merged report
 uv run python examples/gait_triage/run.py   # offline regulated-domain demo (gait escalation triage; CRITICAL under-escalation -> FAIL)
+uv run python examples/capstone/capstone.py  # offline full-loop capstone (build -> FAIL -> localize -> fix -> PASS -> regression caught)
 ```
 
 Key layout: `agon/{schemas,dataset,sut,scoring,analysis,reporting,calibrate,review,retrieval,task,config,cli,cost,observability,stats}`,

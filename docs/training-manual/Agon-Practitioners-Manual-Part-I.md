@@ -47,6 +47,8 @@ This manual has one reader in mind and teaches accordingly. A few conventions wi
 
 **Written for a T&E reader, readable by anyone.** The manual's primary reader is a Test & Evaluation professional, and it occasionally pauses to map a concept onto T&E practice — the "Note to the T&E reader" that follows, and shorter asides later. Those asides are optional bridges, not load-bearing content: every concept is also taught from scratch in plain terms, so a reader who has never heard of developmental test or a regression suite loses nothing by skimming past them.
 
+**A note on the source tags.** Many sections open with a short italic note marking whether the material is *recoverable from the repository* (source, configs, ADRs, docstrings) or *supplied from outside it* (teaching scaffolding, selection guidance, the T&E framing). These tags are provenance, in the spirit of the harness's own evidence-over-claims rule: they tell you where each claim comes from and which parts you could verify yourself in the code.
+
 **A note on the two names you'll see.** *Agon* is the harness this manual teaches. *Inspect AI* (or just "Inspect") is the open-source evaluation engine, built by the UK's AI Safety Institute, that Agon is built on top of. Chapter 3 explains exactly where one ends and the other begins and why the boundary was drawn there. For now: when you see "Inspect," think "the engine"; when you see "Agon," think "the harness you operate."
 
 ---
