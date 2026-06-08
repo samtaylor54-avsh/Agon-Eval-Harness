@@ -10,6 +10,9 @@
   <em>An evaluation harness for modern AI systems — built on the principle that excellence emerges <strong>because of</strong> opposition, not despite it.</em>
 </p>
 
+---
+
+> **Status: built and running — fully offline.** Most of the three-phase roadmap ships today and runs on your laptop with no API key and no model downloads (see [Quickstart](#quickstart-fully-offline--no-api-key-no-model-downloads)): a typed YAML case format; **15 registered scorers** (deterministic, LLM-as-judge, agent-trajectory, and adversarial); composite/flake scoring; a failure taxonomy; regression detection with Wilson confidence intervals; judge calibration against human labels (Cohen's κ); isolated retrieval evals (recall@k / MRR / nDCG); an offline OWASP-for-agents adversarial suite; OpenTelemetry trace export; resume/recovery; and a worked regulated-domain eval — all on [Inspect AI](https://inspect.aisi.org.uk/), behind an `agon` CLI. **Still pending:** full LangSmith dashboard integration, the complete OWASP Top-10, real-provider live red-teaming, a secrets manager, and the cloud/runtime layer (FastAPI/Docker/AWS). See the [Roadmap](#roadmap) for per-milestone status and [`docs/decisions/ADR-0001`](docs/decisions/ADR-0001-inspect-vs-custom.md) for the build decision.
 
 ---
 
@@ -38,7 +41,7 @@ The industry is excellent at demonstrations and weak at evaluation. A demo answe
 
 ## What Gets Evaluated
 
-The harness is being built to assess, in rough order of increasing difficulty:
+The harness evaluates, in rough order of increasing difficulty:
 
 | Target | Examples |
 | --- | --- |
@@ -82,7 +85,9 @@ Design → Evaluate → Deploy → Observe → Learn → Improve ─┐
 
 ---
 
-## Architecture (Planned)
+## Architecture
+
+This is the **implemented** data flow — each stage maps to a package under `agon/` (`dataset` → `sut` → `scoring` → `reporting` / `analysis`), and the loop back from Continuous Improvement is the regression-tracking + failure-to-case machinery that ships today:
 
 ```text
                         AGON
@@ -121,55 +126,53 @@ Design → Evaluate → Deploy → Observe → Learn → Improve ─┐
 
 ---
 
-## Repository Structure (Target)
+## Repository Structure
+
+Everything ships, cohesively, under the `agon/` package today:
 
 ```text
 Agon-Eval-Harness/
-├── README.md
-├── docs/
-│   ├── images/            # Header and diagrams (drop agon-header.png here)
-│   ├── philosophy/
-│   ├── architecture/
-│   ├── patterns/
-│   ├── examples/
-│   └── decisions/         # Architecture Decision Records (ADRs)
-├── evals/
-│   ├── benchmark/
-│   ├── adversarial/       # Red-team suite (OWASP Top 10 for Agentic Apps)
-│   ├── regression/
-│   └── production/        # Cases harvested from production traces
-├── harness/
-│   ├── agents/
-│   ├── workflows/
-│   ├── tools/
-│   └── memory/
-├── judges/
-│   ├── rule_based/
-│   ├── llm_judge/
-│   └── hybrid/
-├── traces/                # OpenTelemetry GenAI trace schemas + examples
-│   ├── schemas/
-│   └── examples/
-├── reports/
-└── experiments/
+├── agon/                     # the shipped package
+│   ├── schemas/              # typed case / config / result models (Pydantic v2)
+│   ├── dataset/              # YAML → Inspect Sample loader, content-addressed versioning
+│   ├── sut/                  # SUT adapters (mockllm · litellm · http · callable) + agent SUTs
+│   ├── scoring/              # 15 scorers + composite/flake rollup (incl. agent & adversarial)
+│   ├── analysis/             # eval-log digests, regression comparator, error taxonomy
+│   ├── reporting/            # Markdown / JSON / JUnit + PASS/INVESTIGATE/FAIL recommendation
+│   ├── calibrate/            # judge-vs-human agreement (Cohen's κ)
+│   ├── retrieval/            # isolated retrieval evals (BM25 · LanceDB · RRF hybrid)
+│   ├── observability/        # OpenTelemetry GenAI span export
+│   ├── stats/                # Wilson intervals · two-proportion test · kappa CI (closed-form)
+│   ├── cli/                  # agon run · resume · compare · report · review · calibrate · retrieve · trace
+│   ├── cost/ · config/ · task/ · review/      # cost estimate · run config · resume · review store
+│   └── evals/gait_triage/    # regulated-domain eval as a native Inspect @task (Register)
+├── examples/                 # runnable offline demos (quickstart · agent · adversarial · gait · text_to_sql · capstone)
+├── templates/your-eval/      # copy-me eval skeleton (dataset · scorer · SUT · tests)
+├── tests/                    # offline test suite (mockllm)
+├── docs/                     # decisions/ (13 ADRs) · methodology/ · training-manual/ · guides
+└── README.md
 ```
+
+> The original plan envisioned a top-level `evals/ · harness/ · judges/ · traces/` split; that
+> reorganization is deferred — today all of it lives, cohesively, under `agon/`.
 
 ---
 
 ## Tech Stack
 
-The harness targets the canonical production eval stack — the same tooling used at frontier labs and the scale-ups already hiring for this discipline:
+Built on the canonical production eval stack — the same tooling used at frontier labs and the scale-ups hiring for this discipline. The table marks what's **in use today** versus **planned**:
 
-| Layer | Tooling |
-| --- | --- |
-| **Eval framework** | [Inspect AI](https://inspect.ai-safety-institute.org.uk/) (UK AISI) |
-| **Agent orchestration** | LangGraph / LangChain |
-| **Observability** | OpenTelemetry GenAI Semantic Conventions → LangSmith / Grafana + Tempo |
-| **Retrieval** | pgvector / LanceDB, hybrid search, reranking |
-| **Production runtime** | FastAPI · Pydantic · asyncio |
-| **Quality + tooling** | pytest · uv · ruff |
-| **Packaging + CI** | Docker · GitHub Actions |
-| **Cloud** | AWS (S3, IAM, ECR, App Runner, Secrets Manager, Bedrock) |
+| Layer | Tooling | Status |
+| --- | --- | --- |
+| **Eval framework** | [Inspect AI](https://inspect.aisi.org.uk/) (UK AISI) | ✅ in use |
+| **Observability** | OpenTelemetry GenAI → LangSmith / Grafana + Tempo | ✅ span export; LangSmith dashboards planned |
+| **Retrieval** | LanceDB · BM25 · RRF hybrid (pgvector, reranking) | ✅ BM25/LanceDB/RRF; pgvector + reranking planned |
+| **Runtime** | Pydantic · asyncio (FastAPI) | ✅ Pydantic/asyncio; FastAPI service planned |
+| **Quality + tooling** | pytest · uv · ruff | ✅ in use |
+| **CI** | GitHub Actions | ✅ in use |
+| **Agent orchestration** | LangGraph / LangChain | ⚠️ experimental bridge (ADR-0004) |
+| **Packaging** | Docker | 🔜 planned |
+| **Cloud** | AWS (S3 · IAM · ECR · App Runner · Secrets Manager · Bedrock) | 🔜 planned |
 
 ---
 
@@ -287,7 +290,7 @@ To evaluate a **real** system, point the SUT and judge at a provider via a run c
 | `schemas/` | Typed case / config / result models (Pydantic v2) |
 | `dataset/` | YAML→`Sample` loader, content-addressed `dataset_version` |
 | `sut/` | SUT adapters: `mockllm` (offline), `callable`, `http` |
-| `scoring/` | 11 scorers (exact/keyword/citation/rubric/safety/RAG…) + composite + flake reducers |
+| `scoring/` | Deterministic + LLM-judge scorers (exact/keyword/citation/rubric/safety/RAG…) + `injection_resistance`, composite + flake reducers |
 | `analysis/` | Eval-log digests + regression comparator; errors broken down by category (`timeout` / `resource` / `network` / `scorer` / `sample`) via `error_count_by_category`; dataset cases may set `sample_time_limit` for a per-case timeout independent of the run-level default |
 | `reporting/` | Markdown / JSON / JUnit-XML + PASS/FAIL/INVESTIGATE recommendation |
 | `calibrate/` | Judge-vs-human agreement (Cohen's κ) |
@@ -296,9 +299,6 @@ To evaluate a **real** system, point the SUT and judge at a provider via a run c
 | `scoring/` (agent) | `tool_use` / `planning` / `step_efficiency` trajectory scorers (Phase 2 M2) |
 | `observability/` | Export eval runs as OpenTelemetry GenAI spans → console / LangSmith / Tempo (Phase 2 M3) |
 | `cli/` | `agon run · resume · compare · report · review · calibrate · retrieve · trace` |
-
-> Note: the **Repository Structure (Target)** above is the long-term Phase 2/3 layout. The
-> shipped MVP lives under `agon/` with `examples/` and `tests/`.
 
 ---
 
@@ -310,7 +310,7 @@ Contributions, adversarial test cases, and documented failure modes are all welc
 
 ## License
 
-License TBD — to be selected before the Phase 1 public release.
+License TBD — not yet selected. The code is published for review and learning; a license will be added before any tagged release.
 
 ---
 
