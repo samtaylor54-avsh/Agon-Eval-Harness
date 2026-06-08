@@ -1,0 +1,54 @@
+# Capstone suite — three HR/travel policy questions, graded on citation + content.
+# Used by examples/capstone/capstone.py to walk the whole Agon loop offline.
+name: capstone_suite
+test_cases:
+  - test_id: cap_001
+    name: emergency leave grounded answer
+    category: rag_factuality
+    risk_level: high                       # the consequential one — drives the localization story
+    input:
+      user_message: "What does the policy say about emergency leave?"
+      documents: [hr_policy_2026.pdf]
+    expected:
+      answer_contains: ["supervisor approval"]
+      citation_required: true
+      allowed_sources: [hr_policy_2026.pdf]
+    scoring:
+      - {type: citation_check, weight: 1.0, pass_threshold: 1.0}
+      - {type: keyword_containment, weight: 1.0, pass_threshold: 1.0}
+    failure_labels: [missing_citation, incomplete_answer]
+    tags: [capstone, rag]
+
+  - test_id: cap_002
+    name: remote work eligibility
+    category: rag_factuality
+    risk_level: medium
+    input:
+      user_message: "Who is eligible for remote work?"
+      documents: [hr_policy_2026.pdf]
+    expected:
+      answer_contains: ["manager approval"]
+      citation_required: true
+      allowed_sources: [hr_policy_2026.pdf]
+    scoring:
+      - {type: citation_check, weight: 1.0, pass_threshold: 1.0}
+      - {type: keyword_containment, weight: 1.0, pass_threshold: 1.0}
+    failure_labels: [missing_citation, incomplete_answer]
+    tags: [capstone, rag]
+
+  - test_id: cap_003
+    name: daily meal expense limit
+    category: rag_factuality
+    risk_level: medium
+    input:
+      user_message: "What is the daily meal expense limit?"
+      documents: [travel_policy.pdf]
+    expected:
+      answer_contains: ["$75"]
+      citation_required: true
+      allowed_sources: [travel_policy.pdf]
+    scoring:
+      - {type: citation_check, weight: 1.0, pass_threshold: 1.0}
+      - {type: keyword_containment, weight: 1.0, pass_threshold: 1.0}
+    failure_labels: [missing_citation, factual_error]
+    tags: [capstone, rag]
