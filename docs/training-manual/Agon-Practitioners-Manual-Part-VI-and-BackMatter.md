@@ -52,7 +52,7 @@ Agon commits to three — and only three — stable extension points. Keeping th
 | **Scorer** | Your grading rule | The `AgonScorer` protocol + `@register`, returning a normalized `ScoreOutcome` — Chapter 8 |
 | **SUT adapter** | Your system's connection | The `callable` solver: an async `(SUTRequest) -> SUTResponse` — Chapter 7 |
 
-You've already met all three as a *user*; this chapter is about authoring them. Notice that the three surfaces are exactly the first three of the four universal parts from Chapter 3 (cases, adapter, scorers) — the decision layer is the harness's job, not yours to extend. Extending Agon means supplying your half of the contract; the harness supplies the rest.
+You've already met all three as a *user*; this chapter is about authoring them. The three surfaces are exactly the first three of the four universal parts from Chapter 3 (cases, adapter, scorers) — the decision layer is the harness's job, not yours to extend. Extending Agon means supplying your half of the contract; the harness supplies the rest.
 
 ### Writing a custom scorer, and loading it with `--plugin`
 

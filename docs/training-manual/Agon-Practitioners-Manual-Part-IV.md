@@ -25,7 +25,7 @@
 
 Parts I–III taught the universal core: the discipline, the operating loop, and the honesty disciplines. Everything there applies to any system you evaluate. Part IV is different — it covers four *specialized* evaluation kinds, each with its own metrics, its own failure modes, and its own reason for existing as a separate chapter rather than a footnote.
 
-The four are deliberately distinct, and the order is rough order of increasing stakes. **Retrieval** (Ch 14) is the harness's flagship separation-of-concerns principle, made concrete. **Agents** (Ch 15) evaluate tool-using, multi-step systems. **Adversarial** (Ch 16) is the opponent from Chapter 2, built into an OWASP-mapped suite. And **regulated-domain / asymmetric-cost** evaluation (Ch 17) is the chapter closest to your world — where one kind of error is far worse than the other, and the harness has to encode that asymmetry before the run, not discover it after.
+The four are deliberately distinct, and the order is rough order of increasing stakes. **Retrieval** (Ch 14) is the harness's flagship separation-of-concerns principle, made concrete. **Agents** (Ch 15) evaluate tool-using, multi-step systems. **Adversarial** (Ch 16) is the opponent from Chapter 2, built into an OWASP-mapped suite. And **regulated-domain / asymmetric-cost** evaluation (Ch 17) is the highest-stakes case — where one kind of error is far worse than the other, and the harness has to encode that asymmetry before the run, not discover it after. It's also the chapter that maps most directly onto T&E practice, for readers who come from that world.
 
 Every command and output shown was run offline against the repository while drafting, and is real. The convention tags continue: **`[code-resident]`** (in the repo, taught here) versus **`[rationale-only]`** (supplied from outside it). And every results-bearing section ends by telling you what the result is *telling you to do*.
 
@@ -85,7 +85,7 @@ hr_policy_qrels [bm25]: recall@5=1.000 MRR=0.969 nDCG@5=0.967 hit@5=1.000
   wrote reports\<run_id>.retrieval.json
 ```
 
-Notice what's *not* there: no pass rate, no recommendation, no answer quality. This is a retrieval-only report, written to its own `.retrieval.md`/`.json` files, scored entirely independently of any generation. The isolation isn't a convention you're trusted to honor — it's a separate command that structurally cannot mix the two.
+What's *not* there is the point: no pass rate, no recommendation, no answer quality. This is a retrieval-only report, written to its own `.retrieval.md`/`.json` files, scored entirely independently of any generation. The isolation isn't a convention you're trusted to honor — it's a separate command that structurally cannot mix the two.
 
 Three retrievers are available, in increasing capability and cost:
 
@@ -168,7 +168,7 @@ agent_smoke_suite: pass 90% -> PASS
 top failure modes: {'tool_omission': 1}
 ```
 
-Ninety percent, PASS — but read the failure mode, because it's the teaching point: one case was caught as `tool_omission`. The example plants a case where the agent *should* call a tool and doesn't, and the `tool_use` scorer catches the omission. That single caught failure is the chapter in miniature: agent evaluation isn't about whether the final answer looked plausible, it's about whether the agent *did the right things along the way*.
+Ninety percent, PASS — but the failure mode is the teaching point: one case was caught as `tool_omission`. The example plants a case where the agent *should* call a tool and doesn't, and the `tool_use` scorer catches the omission. That single caught failure captures the chapter: agent evaluation isn't about whether the final answer looked plausible, it's about whether the agent did the right things along the way.
 
 Mapping those failures back to the seven evaluation categories from Part I closes the loop:
 
@@ -243,7 +243,7 @@ The discipline here is the adversarial stance from Chapter 2 turned into a check
 
 ## Chapter 17 — Regulated-Domain & Asymmetric-Cost Evaluation
 
-This is the chapter closest to your professional world, and the one where the harness's design and the T&E discipline converge most completely. It's about the situation where **the two ways of being wrong are not equally bad** — where missing something costs far more than a false alarm — and where the scoring has to encode that asymmetry *before* the run, automatically, rather than leaving it to a reviewer's judgment after the fact.
+This is the chapter where the harness's design and the T&E discipline converge most completely — and, for a reader who comes from test and evaluation, the one closest to home. It's about the situation where **the two ways of being wrong are not equally bad** — where missing something costs far more than a false alarm — and where the scoring has to encode that asymmetry *before* the run, automatically, rather than leaving it to a reviewer's judgment after the fact.
 
 ### Asymmetric error costs, and why aggregate accuracy hides them
 

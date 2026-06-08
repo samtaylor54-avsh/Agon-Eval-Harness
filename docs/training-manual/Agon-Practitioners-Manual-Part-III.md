@@ -44,7 +44,7 @@ This is the chapter a numerate non-statistician needs and rarely gets. You do no
 
 *The harness computes this; the interpretation is taught. `[code-resident]` mechanics, `[rationale-only]` meaning.*
 
-Start with the core idea, because everything else follows from it. When the harness reports "85% passed," that 85% is not a fact about your system. It is an *estimate*, computed from a sample of cases, of some underlying true pass rate you can never observe directly. Run a different twenty cases, or the same cases against a stochastic system a second time, and you'd get a slightly different number — not because the system changed, but because you drew a different sample.
+The core idea, which everything else follows from: when the harness reports "85% passed," that 85% is not a fact about your system. It is an *estimate*, computed from a sample of cases, of some underlying true pass rate you can never observe directly. Run a different twenty cases, or the same cases against a stochastic system a second time, and you'd get a slightly different number — not because the system changed, but because you drew a different sample.
 
 This is exactly the T&E reflex about instrumentation, pointed at the result itself. You would never report a sensor reading without its tolerance; "the pressure is 100 psi ± 3" tells the reader something "the pressure is 100 psi" hides. A pass rate is the same. The honest form of "85%" is "85%, and here is how sure we are of that 85%." The thing that expresses the "how sure" is a **confidence interval**.
 
@@ -95,7 +95,7 @@ Here is the real output, from comparing the bare-mock run (0/20) against the qui
 overall pass-rate diff: -85.0pp (p=0.000, significant; small sample)
 ```
 
-Read it in plain language: the pass rate fell 85 percentage points; the chance of a drop that large being mere sampling noise is essentially zero (`p=0.000`); so the difference is **significant** — real, not noise. (The `small sample` tag is still there, honestly, because twenty cases is twenty cases even when the effect is huge.) The decision this hands you: a significant drop is a real change you should act on; a *non*-significant move might be noise you should not overreact to.
+In plain language: the pass rate fell 85 percentage points; the chance of a drop that large being mere sampling noise is essentially zero (`p=0.000`); so the difference is **significant** — real, not noise. (The `small sample` tag is still there, honestly, because twenty cases is twenty cases even when the effect is huge.) The decision this hands you: a significant drop is a real change you should act on; a *non*-significant move might be noise you should not overreact to.
 
 ### What a confidence interval means — and what it doesn't
 
@@ -182,7 +182,7 @@ Once you've confirmed you're looking at a real system failure, the drill is a di
 
 *Figure 13.1 — The failure-localization drill. Each step narrows the search, powered by a specific field of the digest (shown in monospace at right). The dashed arc is the close-the-loop step: the localized failure becomes a permanent guard, so the suite grows hardest exactly where the system has actually failed.*
 
-Walk it top to bottom; it sharpens Chapter 11's triage into a repeatable procedure:
+Top to bottom, it sharpens Chapter 11's triage into a repeatable procedure:
 
 1. **Start from the gate, having ruled out the rig.** The run exited `1`. You've checked the error taxonomy and confirmed these are `sample`-class / below-threshold failures, not infrastructure. Now you localize.
 2. **Narrow by category.** Go to `pass_rate_by_category`. The 85% dissolves into `structured_output` at 50% and `robustness` at 67% — the drop is *concentrated*, and you've cut the search from twenty cases to a handful without opening anything.

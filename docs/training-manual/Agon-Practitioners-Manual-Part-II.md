@@ -94,7 +94,7 @@ rag_smoke_suite: pass 0.0% (0/20)  -> FAIL
 
 Zero of twenty. **This is not a broken install** — and understanding why is your first real lesson in operating the harness. The smoke suite asks for grounded answers with citations, but the bare `mockllm` model returns a fixed, canned completion that satisfies none of those cases. So every case fails, the recommendation is FAIL, and the process exits with code `1`.
 
-That is exactly the right behavior, and it is the interpretation beat in miniature. The exit code is the harness's most compressed output, and it maps to an action:
+That is the right behavior, and it is the interpretation beat at its simplest. The exit code is the harness's most compressed output, and it maps to an action:
 
 - **`0` — PASS.** The recommendation was PASS and no regression fired. *Decision: proceed.*
 - **`1` — FAIL gate.** The recommendation was FAIL **or INVESTIGATE**, or a regression was detected. *Decision: stop and look — something is below the bar or has moved.*
@@ -187,7 +187,7 @@ Here is a real case from the smoke suite, annotated:
   tags: [rag, policy, citation]
 ```
 
-Read it top to bottom and it is a test card: here is the prompt, here is the context, here is what a correct answer must contain and cite, here is how we grade it, and here are the failure modes we expect to see if it goes wrong. The `scoring` block is the only part that takes real practice, and Chapters 8–10 are devoted to it. Everything else is description.
+Top to bottom, it reads as a test card: here is the prompt, here is the context, here is what a correct answer must contain and cite, here is how we grade it, and here are the failure modes we expect to see if it goes wrong. The `scoring` block is the only part that takes real practice, and Chapters 8–10 are devoted to it. Everything else is description.
 
 ### Writing the dataset, and the content-addressed version
 

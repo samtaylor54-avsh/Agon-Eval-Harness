@@ -45,13 +45,15 @@ This manual has one reader in mind and teaches accordingly. A few conventions wi
 
 **From Agon to the general case.** This is a manual about one specific harness, but its larger purpose is to make you fluent in *eval harnesses as a category*. So most component chapters end by stepping back: here is the portable principle, and here is how a different harness — Inspect AI underneath Agon, or lm-eval-harness, promptfoo, OpenAI Evals — expresses the same idea under a different name. When you later meet an unfamiliar harness, you will recognize its parts.
 
+**Written for a T&E reader, readable by anyone.** The manual's primary reader is a Test & Evaluation professional, and it occasionally pauses to map a concept onto T&E practice — the "Note to the T&E reader" that follows, and shorter asides later. Those asides are optional bridges, not load-bearing content: every concept is also taught from scratch in plain terms, so a reader who has never heard of developmental test or a regression suite loses nothing by skimming past them.
+
 **A note on the two names you'll see.** *Agon* is the harness this manual teaches. *Inspect AI* (or just "Inspect") is the open-source evaluation engine, built by the UK's AI Safety Institute, that Agon is built on top of. Chapter 3 explains exactly where one ends and the other begins and why the boundary was drawn there. For now: when you see "Inspect," think "the engine"; when you see "Agon," think "the harness you operate."
 
 ---
 
 ## Note to the T&E Reader
 
-*This bridge is written from the Test & Evaluation discipline, not from the codebase. The repository contains no T&E framing; that mapping is supplied here on purpose, because it is the fastest on-ramp for the reader this manual is built for.*
+*This bridge is written from the Test & Evaluation discipline, not from the codebase. The repository contains no T&E framing; that mapping is supplied here on purpose, because it is the fastest on-ramp for the manual's primary reader. If you don't come from T&E, you can skim or skip this note — every concept in it is taught from scratch in the chapters, and the manual stands on its own without it.*
 
 If you have spent a career in Test & Evaluation, you already own most of the conceptual machinery in this manual. What you do not yet own is the vocabulary the AI field wraps around it, and a handful of places where a stochastic system under test breaks an assumption that deterministic hardware and software let you take for granted. This note maps the new words onto the discipline you already practice, so that the rest of the manual reads as *familiar work in unfamiliar clothes* rather than a new field.
 
@@ -100,7 +102,7 @@ Before we touch Agon specifically, we need to be precise about the object of stu
 
 A useful definition, in one sentence: **an evaluation harness is a repeatable apparatus that subjects an AI system to a set of designed challenges and measures the results as evidence for a decision.**
 
-Read that sentence slowly, because every clause is doing work.
+Every clause in that sentence is doing work.
 
 *Repeatable* means you — or someone who has never met you — can run it again and get a comparable result. A measurement you cannot reproduce is an anecdote. Repeatability is what separates a harness from a one-time experiment.
 
@@ -140,7 +142,7 @@ The discipline of naming the SUT is the discipline of saying, precisely, *what a
 
 There is a structural reason the field is in this state, and understanding it tells you why a harness is worth the effort.
 
-A **demonstration** answers one question — *can this system do the thing?* — under the most favorable conditions available: curated inputs, a forgiving audience, a single run that, if it had gone badly, simply would not have been shown. A demo is a performance, and there is nothing dishonest about a good performance. The problem is that demos are *cheap to produce and emotionally convincing*, which is a dangerous combination. A system that demos beautifully feels finished. The feeling is the trap.
+A **demonstration** answers one question — *can this system do the thing?* — under the most favorable conditions available: curated inputs, a forgiving audience, a single run that, if it had gone badly, simply would not have been shown. A demo is a performance, and there is nothing dishonest about a good performance. The problem is that demos are cheap to produce and emotionally convincing, which is a dangerous combination: a system that demos beautifully feels finished, and that feeling is the trap.
 
 An **evaluation** answers the harder questions a demo cannot: Does it work *reliably*, across the spread of real inputs it will actually meet, not just the ones someone picked? Under what conditions does it fail, and how badly? How often? Is it getting better or quietly getting worse as the model underneath it changes? None of those questions can be answered by watching a system succeed once. They can only be answered by watching it fail — deliberately, repeatedly, under conditions designed to find the failures that matter most.
 
@@ -156,7 +158,7 @@ Here is the habit this manual is trying to build in you, introduced now and rein
 
 A result exists to be *acted on*. When a run finishes and hands you a number, the number is not the deliverable. The deliverable is the next action it implies. So the reflex to build is: every time you see a result, ask *what is this telling me to do?*
 
-Make it concrete with the simplest possible output Agon produces — the exit code. When you run an evaluation, the harness ends by returning one of three codes to whatever launched it:
+The simplest output Agon produces is the exit code. When you run an evaluation, the harness ends by returning one of three codes to whatever launched it:
 
 - **`0` — PASS.** The system met the bar. The decision: proceed.
 - **`1` — FAIL.** The system did not meet the bar. The decision: stop, and localize the failure before doing anything else.
@@ -164,7 +166,7 @@ Make it concrete with the simplest possible output Agon produces — the exit co
 
 One refinement to expect, developed fully in Chapter 11: the harness's *recommendation* is three-valued — PASS, INVESTIGATE, FAIL — but the exit-code *gate* is binary. An INVESTIGATE exits `1` alongside FAIL, because the gate fails closed: "a human needs to look" does not pass a release automatically. So the three codes above are the *gate* (what a release decision acts on), and FAIL here stands for "anything short of a clean pass."
 
-Notice that each code maps to an *action*, not just a status. That is the whole idea in miniature. Later chapters add far richer outputs — confidence intervals, per-category breakdowns, a PASS/INVESTIGATE/FAIL recommendation, failure labels, traces — but every one of them is taught the same way: here is the field, and here is what it is telling you to do. If you internalize nothing else from Part I, internalize the question. *What is this result telling me to do?*
+Each code maps to an action, not just a status. Later chapters add far richer outputs — confidence intervals, per-category breakdowns, a PASS/INVESTIGATE/FAIL recommendation, failure labels, traces — but every one is taught the same way: here is the field, and here is what it is telling you to do. The one question to carry out of Part I is *what is this result telling me to do?*
 
 ### When to reach for a harness — and when not to
 
@@ -198,13 +200,13 @@ Agon is built on four commitments. They read like values, and they are, but each
 
 **No single-number obsession.** Related but distinct: even within one system, the harness tracks seven evaluation categories — Functional Correctness, Tool Use, Planning, State Management, Robustness, Reliability, Safety — *separately*, and resists collapsing them into one headline. The reason is that an aggregate is a hiding place. A reassuring 85% can conceal a safety category sitting at 50%, because the easy categories do most of the arithmetic. Engineering consequence: reports break results down by category and by risk level, and the safety dimension is wired so it cannot be averaged away. Chapter 10 builds this out.
 
-Hold these four — really five, since the last two are siblings — loosely for now. You will meet each of them again as a specific line of code doing a specific job. The point of naming them here is so that when you do, you recognize them as commitments kept, not features encountered.
+These four — really five, since the last two are siblings — each recur later as a specific line of code doing a specific job. Naming them here is what lets you recognize them, when you meet them, as commitments kept rather than features encountered.
 
 ---
 
 ## Chapter 2 — Why "Agon": The Philosophy of Adversarial Measurement
 
-A name is usually just a label. This one isn't, and the chapter exists because understanding the name is the fastest way to understand the method. The harness is called Agon on purpose, and the purpose is an argument about how measurement should work. If you take the argument seriously, the architecture of the rest of the harness stops looking like a pile of features and starts looking like a single idea, consistently applied.
+A name is usually just a label. This one isn't: the harness is called Agon on purpose, and the purpose is an argument about how measurement should work. Take that argument seriously and the rest of the harness stops looking like a pile of features and starts looking like a single idea, consistently applied — which is why understanding the name is the fastest way to understand the method.
 
 ### The Greek *agon* — opposition in service of improvement
 
@@ -239,7 +241,7 @@ This is uncomfortable on purpose, and the discomfort is the point. It means the 
 
 **A test suite that never catches anything is not evidence the system is strong. It is evidence the test suite is weak.**
 
-Sit with that, because it inverts a natural instinct. When all your tests pass, the instinct is relief. The adversarial stance says: be suspicious. All-green might mean the system is genuinely robust, or it might mean your opponent isn't trying hard enough. A green dashboard is only as trustworthy as the difficulty of the contest behind it. This is why the harness ships an offline red-team suite that *expects* to find failures in a deliberately vulnerable system, and treats catching them as success — the subject of Chapter 16. A suite that produces a clean pass against a system you *built to be broken* is a suite telling you nothing.
+It inverts a natural instinct: when all your tests pass, the reflex is relief, but the adversarial stance says be suspicious. All-green might mean the system is genuinely robust, or it might mean your opponent isn't trying hard enough. A green dashboard is only as trustworthy as the difficulty of the contest behind it. This is why the harness ships an offline red-team suite that *expects* to find failures in a deliberately vulnerable system, and treats catching them as success — the subject of Chapter 16. A suite that produces a clean pass against a system you *built to be broken* is a suite telling you nothing.
 
 For agentic systems — systems that take actions, call tools, hold memory across turns, pursue multi-step goals — the adversarial requirement runs even deeper, because the attack surface is larger. Such a system can be deceived at many points along its execution: a malicious instruction hidden in retrieved content, a manipulated tool response, a corrupted memory, a goal quietly rewritten mid-task. A suite that doesn't probe those surfaces isn't measuring the agent; it's measuring a flattering slice of it.
 
@@ -249,7 +251,7 @@ For agentic systems — systems that take actions, call tools, hold memory acros
 
 Everything above converges on a redefinition of a single word, and the redefinition is the practical payload of the chapter. In this discipline, **trust is not a feeling produced by a successful demonstration. It is a property earned by surviving challenge** — and it is provisional, because the contest never truly closes.
 
-This is worth making explicit because it changes what you do day to day. If trust is demonstrated success, your job is to produce successful demonstrations, and you will — unconsciously, because everyone does — start steering toward the conditions where the system looks good. If trust is survived challenge, your job is the opposite: to construct the hardest fair contest you can, and to report honestly what breaks. The first job optimizes for the appearance of excellence. The second optimizes for the real thing. The harness is built so that the second job is the easy, default one and the first is hard to do by accident — reports surface the failures, the safety dimension can't be averaged away, the gate can't be quietly overridden. The philosophy isn't decoration on top of the engineering. It *is* the spec the engineering was built to.
+This is worth making explicit because it changes what you do day to day. If trust is demonstrated success, your job is to produce successful demonstrations, and you will — unconsciously, because everyone does — start steering toward the conditions where the system looks good. If trust is survived challenge, your job is the opposite: to construct the hardest fair contest you can, and to report honestly what breaks. The first job optimizes for the appearance of excellence; the second optimizes for the real thing. The harness is built so that the second job is the easy, default one and the first is hard to do by accident: reports surface the failures, the safety dimension can't be averaged away, the gate can't be quietly overridden. The philosophy here is the spec the engineering was built to, not decoration on top of it.
 
 ### How the name shapes the architecture — the opponent as a first-class component
 
@@ -271,13 +273,13 @@ The previous two chapters were about *why*. This one is about *shape* — the st
 
 *This maps to the README's architecture diagram and to the actual module boundaries of the shipped package; the figure below is the canonical reference.*
 
-At the highest level, every harness moves work through five stages, in order, with the last one looping back into the first. Here is the whole shape; we'll then walk it stage by stage.
+At the highest level, every harness moves work through five stages, in order, with the last one looping back into the first. Here is the whole shape, stage by stage.
 
 ![Figure 3.1 — The Five-Stage Anatomy of an Evaluation Harness](figures/fig-3-1-five-stage-pipeline.svg)
 
 *Figure 3.1 — The five-stage anatomy. Work flows left to right; the dashed arc is the loop that makes the suite grow. Each box notes the Agon package that owns that stage.*
 
-Walk it from the left.
+Working from the left:
 
 1. **Eval Suite — the designed challenges.** This is *what* you test the system with: the cases. They come in flavors — benchmark cases, adversarial cases, regression cases, cases harvested from production — but they are all the same kind of thing, a designed condition with an expected outcome. This is the opponent from Chapter 2, made into data. In Agon it lives in `agon/dataset`.
 
@@ -289,7 +291,7 @@ Walk it from the left.
 
 5. **Continuous Improvement — failures into new cases.** This is the loop. Failures discovered anywhere — in development, in regression checks, in production traces — are converted into new cases that flow back into stage 1, so the suite grows. This is Chapter 2's accumulating opponent, made into a pipeline. In Agon the analysis that drives it lives in `agon/analysis`.
 
-The dashed arc in the figure — stage 5 feeding back to stage 1 — is not decoration. It is the single feature that distinguishes a harness from a one-time test rig. A test rig runs once and reports. A harness *compounds*: every contest it loses becomes a permanent part of the next contest. Hold that distinction; Chapter 4 is largely about the mechanics of that loop.
+The dashed arc in the figure — stage 5 feeding back to stage 1 — is the single feature that distinguishes a harness from a one-time test rig. A test rig runs once and reports. A harness compounds: every contest it loses becomes a permanent part of the next contest. Chapter 4 is largely about the mechanics of that loop.
 
 ### The four moving parts every harness has
 
@@ -379,7 +381,7 @@ In the second phase — after the system is fielded — the *same harness*, runn
 
 The reason this second phase is not optional traces back to a fact from the Note to the T&E reader: the "build" is not under your configuration control. The model underneath a fielded AI system can change without your knowledge — a vendor updates it, a dependency shifts — and a system that passed every case at ship time can quietly regress. Nothing about the deployment tells you this happened. The only thing that can tell you is a standing instrument that periodically re-runs your accepted cases and flags any drop. That instrument is the harness in its Phase 2 role: a *regression gate* that maintains trustworthiness over time, rather than establishing it once.
 
-Notice what is the same and what differs across the two phases, because this is the whole idea in one line: *same harness, same cases, two different questions.* In Phase 1 the cases are a bar to clear. In Phase 2 the same cases are a baseline to hold. The tooling does not change. The intent does.
+What is the same and what differs across the two phases reduces to one line: same harness, same cases, two different questions. In Phase 1 the cases are a bar to clear; in Phase 2 the same cases are a baseline to hold. The tooling does not change, only the intent.
 
 ### Failure localization — how the harness tells you *where* it broke
 
@@ -394,7 +396,7 @@ When a run finishes, the harness does not hand you a single pass rate and stop. 
 - **By failure label.** Each failed case carries a label naming *what kind* of failure it was — a missing citation, an unsafe answer, a wrong tool call. The top failure labels across a run point straight at the dominant problem.
 - **By individual case, with a trace.** Finally you can drop to a single case and follow its trace — the actual sequence of what the system did — back to the moment it went wrong.
 
-That sequence — *category drop, to the cases in it, to their failure labels, to the trace of one case, to the cause* — is the localization drill. It is the difference between "the system regressed" and "the system regressed because the model update broke citation formatting on long documents, here is the exact case, and here is the fix." The first is a status. The second is something you can act on. Chapter 13 walks the full drill with the figure that goes with it.
+That sequence — category drop, to the cases in it, to their failure labels, to the trace of one case, to the cause — is the localization drill. It is the difference between "the system regressed" and "the system regressed because the model update broke citation formatting on long documents, here is the exact case, and here is the fix" — the first a status, the second something you can act on. Chapter 13 walks the full drill with the figure that goes with it.
 
 ### "Failure is data" — turning a discovered failure into a permanent case
 
@@ -433,7 +435,7 @@ Every arrow in that loop is a decision, and every decision is driven by evidence
 
 *Supplied from the T&E domain; the repository contains no such framing.*
 
-If this loop feels familiar, it should — and naming the familiarity is the fastest way to make the chapter stick for a T&E reader. You have run this loop your whole career, under different names.
+If you come from T&E, this loop should feel familiar — you have run it your whole career, under different names — and naming that familiarity is the fastest way to make the chapter stick.
 
 **Phase 1 is Developmental Test.** You evaluate alongside the builders, with the explicit goal of finding deficiencies early, before the system is fielded, when fixes are cheap. The harness-as-adversary is DT's "find it on the bench, not in the field" applied to an AI system.
 
