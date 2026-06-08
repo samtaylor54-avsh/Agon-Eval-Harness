@@ -149,7 +149,7 @@ Agon-Eval-Harness/
 ├── examples/                 # runnable offline demos (quickstart · agent · adversarial · gait · text_to_sql · capstone)
 ├── templates/your-eval/      # copy-me eval skeleton (dataset · scorer · SUT · tests)
 ├── tests/                    # offline test suite (mockllm)
-├── docs/                     # decisions/ (13 ADRs) · methodology/ · training-manual/ · guides
+├── docs/                     # decisions/ (13 ADRs) · methodology/ · guides
 └── README.md
 ```
 
