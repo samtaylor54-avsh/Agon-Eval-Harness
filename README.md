@@ -10,9 +10,6 @@
   <em>An evaluation harness for modern AI systems — built on the principle that excellence emerges <strong>because of</strong> opposition, not despite it.</em>
 </p>
 
----
-
-> **Status: Phase 1 MVP built.** The core harness runs today on [Inspect AI](https://inspect.aisi.org.uk/): a typed YAML case format, 11 scorers (deterministic + LLM-as-judge), composite/flake scoring, failure taxonomy, regression detection, judge calibration, and Markdown/JSON/JUnit reporting behind an `agon` CLI — all runnable **fully offline** (see Quickstart). Phases 2–3 (LangGraph agents, OpenTelemetry, retrieval recall@k/MRR, OWASP adversarial suite) remain planned. See [`docs/decisions/ADR-0001`](docs/decisions/ADR-0001-inspect-vs-custom.md) for the build decision.
 
 ---
 
