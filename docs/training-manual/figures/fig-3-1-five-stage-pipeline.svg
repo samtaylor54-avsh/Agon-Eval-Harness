@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" font-family="Segoe UI, Calibri, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L8,4.5 L0,9 Z" fill="#2D3436"/>
+    </marker>
+    <marker id="arrowFeedback" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L9,5 L0,10 Z" fill="#D4880F"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="960" height="400" fill="#FFFFFF"/>
+  <text x="24" y="34" font-size="16" font-weight="bold" fill="#0F4761">Figure 3.1 — The Five-Stage Anatomy of an Evaluation Harness</text>
+  <text x="24" y="56" font-size="12" fill="#7B8794">Every harness, Agon included, moves work left to right through these five stages — then loops the last back into the first.</text>
+
+  <!-- Stage boxes -->
+  <!-- 1 Eval Suite -->
+  <rect x="24" y="100" width="160" height="132" rx="6" fill="#F5F5F0" stroke="#2C3E6B" stroke-width="1.5"/>
+  <text x="104" y="128" font-size="14.5" font-weight="bold" fill="#0F4761" text-anchor="middle">Eval Suite</text>
+  <text x="104" y="147" font-size="10.5" font-style="italic" fill="#7B8794" text-anchor="middle">the designed challenges</text>
+  <text x="104" y="172" font-size="10.5" fill="#2D3436" text-anchor="middle">benchmark · adversarial</text>
+  <text x="104" y="188" font-size="10.5" fill="#2D3436" text-anchor="middle">regression · production</text>
+  <text x="104" y="216" font-size="10" font-family="Consolas, monospace" fill="#7B8794" text-anchor="middle">agon/dataset</text>
+
+  <!-- 2 Harness + SUT -->
+  <rect x="212" y="100" width="160" height="132" rx="6" fill="#F5F5F0" stroke="#2C3E6B" stroke-width="1.5"/>
+  <text x="292" y="128" font-size="14.5" font-weight="bold" fill="#0F4761" text-anchor="middle">Harness + SUT</text>
+  <text x="292" y="147" font-size="10.5" font-style="italic" fill="#7B8794" text-anchor="middle">the system, adapted</text>
+  <text x="292" y="172" font-size="10.5" fill="#2D3436" text-anchor="middle">model · prompt · tools</text>
+  <text x="292" y="188" font-size="10.5" fill="#2D3436" text-anchor="middle">memory · state</text>
+  <text x="292" y="216" font-size="10" font-family="Consolas, monospace" fill="#7B8794" text-anchor="middle">agon/sut</text>
+
+  <!-- 3 Evaluation Layer -->
+  <rect x="400" y="100" width="160" height="132" rx="6" fill="#F5F5F0" stroke="#2C3E6B" stroke-width="1.5"/>
+  <text x="480" y="128" font-size="14.5" font-weight="bold" fill="#0F4761" text-anchor="middle">Evaluation Layer</text>
+  <text x="480" y="147" font-size="10.5" font-style="italic" fill="#7B8794" text-anchor="middle">behavior → scores</text>
+  <text x="480" y="172" font-size="10.5" fill="#2D3436" text-anchor="middle">scorers · judges</text>
+  <text x="480" y="188" font-size="10.5" fill="#2D3436" text-anchor="middle">metrics · human review</text>
+  <text x="480" y="216" font-size="10" font-family="Consolas, monospace" fill="#7B8794" text-anchor="middle">agon/scoring</text>
+
+  <!-- 4 Results -->
+  <rect x="588" y="100" width="160" height="132" rx="6" fill="#FFF3D4" stroke="#D4880F" stroke-width="1.5"/>
+  <text x="668" y="128" font-size="14.5" font-weight="bold" fill="#0F4761" text-anchor="middle">Results</text>
+  <text x="668" y="147" font-size="10.5" font-style="italic" fill="#7B8794" text-anchor="middle">scores → a decision</text>
+  <text x="668" y="172" font-size="10.5" fill="#2D3436" text-anchor="middle">scores · traces · reports</text>
+  <text x="668" y="188" font-size="10.5" fill="#2D3436" text-anchor="middle">PASS / INVESTIGATE / FAIL</text>
+  <text x="668" y="216" font-size="10" font-family="Consolas, monospace" fill="#7B8794" text-anchor="middle">agon/reporting</text>
+
+  <!-- 5 Continuous Improvement -->
+  <rect x="776" y="100" width="160" height="132" rx="6" fill="#E8F5E8" stroke="#5B8C5A" stroke-width="1.5"/>
+  <text x="856" y="128" font-size="14.5" font-weight="bold" fill="#0F4761" text-anchor="middle">Continuous</text>
+  <text x="856" y="145" font-size="14.5" font-weight="bold" fill="#0F4761" text-anchor="middle">Improvement</text>
+  <text x="856" y="164" font-size="10.5" font-style="italic" fill="#7B8794" text-anchor="middle">failures → new cases</text>
+  <text x="856" y="186" font-size="10.5" fill="#2D3436" text-anchor="middle">discovery · regression</text>
+  <text x="856" y="216" font-size="10" font-family="Consolas, monospace" fill="#7B8794" text-anchor="middle">agon/analysis</text>
+
+  <!-- Forward arrows -->
+  <line x1="184" y1="166" x2="210" y2="166" stroke="#2D3436" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="372" y1="166" x2="398" y2="166" stroke="#2D3436" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="560" y1="166" x2="586" y2="166" stroke="#2D3436" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="748" y1="166" x2="774" y2="166" stroke="#2D3436" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <!-- Feedback arc: stage 5 back to stage 1 -->
+  <path d="M 856 232 C 856 330, 104 330, 104 234" fill="none" stroke="#D4880F" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrowFeedback)"/>
+  <text x="480" y="356" font-size="11.5" font-weight="bold" fill="#D4880F" text-anchor="middle">Failure is data — every discovered failure becomes a permanent case in the suite</text>
+</svg>
