@@ -150,70 +150,68 @@ This is why the discipline matters beyond engineering hygiene. A demo proves a s
 
 ## Chapter 23 — Putting It Together: A Capstone Project
 
-Reference documentation tells you what each piece does. It can't show you the *rhythm* of using them together — the day-in-the-life of taking a system from nothing to a gated, calibrated, monitored eval. This chapter is that walkthrough: one narrative thread through everything the manual has taught. Where a step runs offline exactly as shown, the output is real; where a step needs a real provider, it's marked.
+Reference documentation tells you what each piece does. It can't show you the *rhythm* of using them together — the day-in-the-life of taking a system from a planted bug to a gated, guarded eval. This chapter is that walkthrough, and it is a **runnable script**, not a story: `examples/capstone/capstone.py` performs the whole loop and narrates itself as it goes. Run it, read its ~90 lines, and the separate commands of the last twenty-two chapters become one practice.
 
-### Act 1 — Build a small eval and watch it fail
+### Run the whole loop in one command
 
-*The walkthrough is authored (`[rationale-only]`); every command is a verified form, and the failing run is real.*
-
-Start where Chapter 21 left off: copy `templates/your-eval/`, and build the smallest real thing — a system under test, a few cases, a scorer that knows your domain. The text-to-SQL example *is* this capstone's Act 1, already built, so we'll use it as the concrete spine. It has a callable SUT (a function that returns SQL), a handful of cases, and the `sql_result_match` custom scorer from Chapter 21. Run it:
+*This is `[code-resident]` — `examples/capstone/`. The output below is verbatim from an offline run.*
 
 ```bash
-uv run python examples/text_to_sql/run.py
+uv run python examples/capstone/capstone.py
 ```
 
 ```
-text_to_sql_suite: 4/6 passed -> FAIL
+========================================================================
+ACT 1 - Build a small eval and run it. The system has a planted bug.
+========================================================================
+  capstone_v1_buggy:  2/3 passed (67%) -> FAIL
+  In CI this exits 1 - it does not ship.
+
+ACT 2 - Localize. Where, exactly, did it fail?
+    - cap_001  [rag_factuality, risk=high]  labels: missing_citation
+  The HIGH-risk case failed with `missing_citation`: the answer was right
+  but cited nothing. The label is the cause, before reading a single trace.
+
+ACT 3 - Fix the system (add the citation) and re-run.
+  capstone_v2_fixed:  3/3 passed (100%) -> PASS
+  Exit 0: a clean PASS. cap_001 is now a permanent regression guard.
+
+ACT 4 - A later change regresses the suite. Catch it against the baseline.
+  capstone_v3_regressed:  2/3 passed (67%) -> FAIL
+  regression vs baseline: detected=True  new_failures=['cap_003']
+  Exit 1: the gate caught a case that used to pass. The guard worked.
 ```
 
-There it is — a real, mixed, *failing* run, exactly the situation you'll face in real work. The harness exited non-zero; the gate says this doesn't ship. Act 1 is done: you have a working eval and an honest FAIL.
+Everything above is real, fully offline, and built from pieces you've already met. The script is one dataset (`dataset.yaml`, three cases on built-in `citation_check` + `keyword_containment` scorers) and three versions of a `callable` SUT (Chapter 7) — a buggy one, a fixed one, and a regressed one.
 
-### Act 2 — Localize, fix, and watch it pass
+### Reading the four acts
 
-*Authored walkthrough applying the Chapter 13 drill. `[rationale-only]`*
+*The acts apply Chapters 4, 7, 13, and 21 to one concrete thread.*
 
-Now run the Chapter 13 drill. Open the report and read the failed cases: the failures carry labels — `sql_error` on the malformed query, `wrong_rows` on the genuinely incorrect one. The labels are your hypothesis of cause before you read a single query. Drop into the trace, confirm: one case generated SQL that doesn't run, one generated SQL that runs but answers the wrong question.
+**Act 1 — build and fail.** The first SUT (`ANSWERS_V1`) answers the high-risk emergency-leave question correctly but omits its citation. The `citation_check` scorer fails that case, the suite comes in at `2/3 -> FAIL`, and the process would exit `1` in CI. You have a working eval and an honest failure — the right starting point, not a problem.
 
-Fix the SUT so it generates valid, correct SQL for those cases. Re-run. The previously-failing cases now pass, the suite goes green, and — this is the Chapter 13 close-the-loop step — those exact cases are now permanent regression guards. If a future change reintroduces the `sql_error`, `agon compare` against this run will catch it. You didn't just fix two cases; you ratcheted the suite.
+**Act 2 — localize.** The script runs the front of the Chapter 13 drill for you: it prints the failing case with its category, its risk, and its failure label. `cap_001 [rag_factuality, risk=high] missing_citation` is a near-complete diagnosis on its own — a high-risk case whose answer was correct but uncited. The label is the hypothesis of cause before you open a single trace.
 
-### Act 3 — Add a judge and calibrate it
+**Act 3 — fix and pass.** The fix is a one-line change (`ANSWERS_V2` adds the citation), and the re-run is `3/3 -> PASS`, exit `0`. The close-the-loop step from Chapter 13 happens here for free: `cap_001` is now a permanent guard. Nothing can reintroduce that exact failure without a case going red.
 
-*Composable from Chapters 9–10; the calibration step needs a real provider, marked. `[code-resident]` mechanics.*
+**Act 4 — regress and catch.** A later change (`ANSWERS_V3`) drops the `$75` figure from `cap_003`, a case that passed a moment ago. Run against the fixed run as baseline, the gate reports `regression detected=True, new_failures=['cap_003']` and exits `1`. This is the Phase 2 gate from Chapter 4 doing its job — catching a system that *used to* pass and now doesn't, automatically, by the same machinery that produced the real `-85.0pp` regression in Chapter 13.
 
-Suppose one of your cases needs open-ended grading no deterministic scorer can do — "is this explanation faithful to the schema?" Add a judge-backed scorer (Chapter 9). But — the discipline the manual keeps returning to — *do not trust the judge until you've calibrated it.* Assemble a small set of human-labeled cases and run:
+### The two steps that need a real provider
 
-```bash
-uv run agon calibrate my_labeled_set.yaml --judge-model openai/gpt-4o --min-kappa 0.6
+*The mechanics are `[code-resident]`; both are reached from the script's own closing pointers.*
+
+The script ends by pointing at the two steps it deliberately does not run, because they leave the offline path:
+
+```
+  Calibrate an LLM judge before trusting it on open-ended cases:
+    uv run agon calibrate <labeled>.yaml --judge-model openai/gpt-4o --min-kappa 0.6
+  Export any run as a trace (offline console backend works now):
+    uv run agon trace <run_id> --backend console
 ```
 
-This step **needs a real judge model** (Chapter 9: the mock can't produce real judgments, and you can't calibrate against a standard you can't simulate). If the judge clears κ ≥ 0.6, it's certified and you may gate on it; if it doesn't, you fix the rubric, pick a better judge, or fall back to a deterministic scorer. Only a calibrated judge joins your suite.
+**Judge calibration** is the one step in the whole loop that genuinely cannot run offline (Chapter 9): the mock can't produce real judgments, and you can't calibrate against a human standard you can't simulate. If a case needs open-ended grading, you add a judge-backed scorer, assemble human-labeled cases, and calibrate — and only a judge that clears κ ≥ 0.6 joins the suite. **Trace export** is the Phase 2 monitoring half (Chapter 19): the `console` backend runs offline right now, and `langsmith`/`otlp` send the same enriched spans to a dashboard where pass-rate-over-time becomes a standing watch on the fielded system.
 
-### Act 4 — Wire it into CI and catch a planted regression
-
-*Authored walkthrough; the exit-code and baseline mechanics are `[code-resident]`. `[rationale-only]` for the CI narrative.*
-
-The suite is only a gate if something acts on it automatically. In your CI pipeline, run the eval and let the exit code break the build:
-
-```bash
-uv run agon run examples/text_to_sql/dataset.yaml --plugin examples/text_to_sql/sql_scorer.py --display none
-# exit 0 → CI proceeds;  exit 1 → CI fails the build
-```
-
-Now prove the regression gate works by planting a regression: deliberately break the SUT on one case, run against your last-good run as baseline (`--baseline <good_run_id>`), and watch `regression detected: True` with the broken case in `new failures` and exit `1`. You've now seen the Phase 2 gate from Chapter 4 do its job — catch a system that *used to* pass and now doesn't, automatically, before it ships. (This is the same machinery that produced the real `-85.0pp` regression in Chapter 13.)
-
-### Act 5 — Monitor over time, and close the loop
-
-*Composable from Chapters 19 and 22. `[code-resident]` mechanics.*
-
-Finally, make it a standing watch. Export your runs as traces and chart pass-rate-over-time on a dashboard (Chapter 19):
-
-```bash
-uv run agon trace <run_id> --backend console     # offline check; or --backend langsmith
-```
-
-Now you're in Phase 2: the dashboard watches the fielded system, and when its pass rate sags because the model drifted, you see it. And when a real production incident reveals a failure mode you never tested, you write that case by hand, add it to the suite (Chapter 22's manual harvest), and the loop closes — the suite is now harder than it was, in exactly the place reality found weak.
-
-That's the whole arc in one project: build, fail, localize, fix, calibrate, gate, monitor, and grow. Every chapter of this manual is one move in that sequence. Run it once end to end on a system you care about and the pieces stop being separate commands and become a practice.
+That is the whole arc in one project: build, fail, localize, fix, gate, guard — and, with a provider, calibrate and monitor. Every chapter of this manual is one move in that sequence. The capstone is the sequence run once, end to end, on a system small enough to read in a sitting and real enough to fail.
 
 ---
 
@@ -439,7 +437,7 @@ This final batch completes the draft manuscript: Part VI (extending, the continu
 Calibration points I'd value a verdict on:
 
 - **Ch 22's roadmap honesty.** I described the production-trace-harvesting loop as *intent, not shipped* (the `evals/production/` directory genuinely doesn't exist yet) and kept the regression-ratchet as the real, working mechanism. That's the plan's "describe current-state vs roadmap honestly" rule — confirm I drew the line where you want it, neither overclaiming the vision nor underselling what works today.
-- **The capstone (Ch 23).** It's an authored narrative anchored on the real text-to-SQL example, with the judge-calibration step honestly marked as needing a real provider. Does it read as a usable end-to-end walkthrough, or would you rather it be a fully-runnable single script the reader can execute verbatim? (I can build that as a new example if you want the capstone to be executable, not just narrated.)
+- **The capstone (Ch 23).** It is now a fully-runnable script (`examples/capstone/capstone.py`) the reader executes verbatim — build → fail → localize → fix → pass → regress → catch, all offline, with the real output quoted in the chapter and the judge-calibration step honestly marked as needing a provider. Confirm the four-act script is the right scope: enough to feel the whole rhythm, small enough to read in a sitting.
 - **Ch 24's "what to demand of any harness" lens.** This is the manual's closing argument and the fullest fusion of the eval discipline with your T&E acceptance instincts. Is it the right note to end on?
 - **Appendix depth.** The appendices are reference-dense (tables over prose). Is the level right — enough to be a standing desk reference — or do you want any of them expanded (e.g., per-scorer formulas in App B) or trimmed?
 
