@@ -162,6 +162,8 @@ Make it concrete with the simplest possible output Agon produces — the exit co
 - **`1` — FAIL.** The system did not meet the bar. The decision: stop, and localize the failure before doing anything else.
 - **`2` — abort.** The run itself didn't complete cleanly — something in the test rig broke, not necessarily the system. The decision: fix the rig and re-run; do not draw a conclusion about the SUT yet.
 
+One refinement to expect, developed fully in Chapter 11: the harness's *recommendation* is three-valued — PASS, INVESTIGATE, FAIL — but the exit-code *gate* is binary. An INVESTIGATE exits `1` alongside FAIL, because the gate fails closed: "a human needs to look" does not pass a release automatically. So the three codes above are the *gate* (what a release decision acts on), and FAIL here stands for "anything short of a clean pass."
+
 Notice that each code maps to an *action*, not just a status. That is the whole idea in miniature. Later chapters add far richer outputs — confidence intervals, per-category breakdowns, a PASS/INVESTIGATE/FAIL recommendation, failure labels, traces — but every one of them is taught the same way: here is the field, and here is what it is telling you to do. If you internalize nothing else from Part I, internalize the question. *What is this result telling me to do?*
 
 ### When to reach for a harness — and when not to
