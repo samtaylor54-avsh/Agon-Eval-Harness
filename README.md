@@ -143,7 +143,7 @@ Agon-Eval-Harness/
 │   ├── retrieval/            # isolated retrieval evals (BM25 · LanceDB · RRF hybrid)
 │   ├── observability/        # OpenTelemetry GenAI span export
 │   ├── stats/                # Wilson intervals · two-proportion test · kappa CI (closed-form)
-│   ├── cli/                  # agon run · resume · compare · report · review · calibrate · retrieve · trace
+│   ├── cli/                  # agon run · resume · compare · report · scorers · doctor · review · calibrate · retrieve · trace
 │   ├── cost/ · config/ · task/ · review/      # cost estimate · run config · resume · review store
 │   └── evals/gait_triage/    # regulated-domain eval as a native Inspect @task (Register)
 ├── examples/                 # runnable offline demos (quickstart · agent · adversarial · gait · text_to_sql · capstone)
@@ -298,7 +298,7 @@ To evaluate a **real** system, point the SUT and judge at a provider via a run c
 | `sut/` (agent) | Native ReAct agent SUT + message→trajectory normalization; experimental LangGraph bridge (Phase 2 M2) |
 | `scoring/` (agent) | `tool_use` / `planning` / `step_efficiency` trajectory scorers (Phase 2 M2) + `state_consistency` session-state checks |
 | `observability/` | Export eval runs as OpenTelemetry GenAI spans → console / LangSmith / Tempo (Phase 2 M3) |
-| `cli/` | `agon run · resume · compare · report · scorers · review · calibrate · retrieve · trace` |
+| `cli/` | `agon run · resume · compare · report · scorers · doctor · review · calibrate · retrieve · trace` |
 
 ---
 
