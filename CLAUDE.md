@@ -15,6 +15,7 @@ Commands (run via `uv`):
 uv sync                                   # install deps (Python pinned to 3.12 via .python-version)
 uv run pytest                             # full test suite (offline; uses mockllm)
 uv run ruff check agon tests              # lint
+uv run agon scorers                       # list the registered scorers (offline vs judge-backed)
 uv run agon run examples/datasets/rag_smoke.yaml --display none   # offline smoke eval + reports
 uv run python examples/quickstart.py      # offline mixed-result demo via a stub SUT
 uv run python examples/agent_quickstart.py  # offline ReAct-agent eval (tool_use/planning/step_efficiency)
@@ -33,7 +34,9 @@ tests under `tests/`, fixtures/examples under `examples/`. The offline path uses
 `mockllm/model` provider — no API key or model downloads — which is what keeps the run inside the
 <20-minute reproducibility budget. Judge-based and semantic scorers are opt-in (real provider /
 `[semantic]` extra). When adding a scorer, register it on `agon.scoring.default_registry` and add
-boundary tests; when fixing a failure mode, add the case that catches it to a dataset.
+boundary tests; if it takes required params, also give it a `validate_spec(spec) -> list[str]`
+method so the CLI can reject misconfigured datasets pre-flight. When fixing a failure mode, add
+the case that catches it to a dataset.
 Custom scorers can also be loaded without editing the package via `agon run --plugin <module-or-.py>` (see `docs/extending.md`); a copy-me eval skeleton lives in `templates/your-eval/`.
 
 ## What This Project Is
