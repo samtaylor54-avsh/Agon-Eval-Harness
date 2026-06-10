@@ -84,6 +84,53 @@ def test_score_span_carries_gen_ai_evaluation_attributes():
     assert score.attributes[GEN_AI_EVALUATION_EXPLANATION] == "exact_match=1.00"
 
 
+def test_score_span_emits_one_child_per_scorer_result():
+    # Adversarial-review pin: gen_ai.evaluation.name on the composite span alone is always
+    # the constant "agon_scorer" — per-scorer results must surface for dashboard grouping.
+    from agon.observability.semconv import (
+        GEN_AI_EVALUATION_NAME,
+        GEN_AI_EVALUATION_SCORE_LABEL,
+        GEN_AI_EVALUATION_SCORE_VALUE,
+    )
+
+    score_event = NS(
+        event="score", timestamp=T0, scorer="agon_scorer",
+        score=NS(
+            value=0.0,
+            metadata={
+                "scores": [
+                    {"scorer_type": "exact_match", "normalized_score": 1.0, "passed": True},
+                    {
+                        "scorer_type": "refusal",
+                        "normalized_score": 0.0,
+                        "passed": False,
+                        "rationale": "complied with the attack",
+                    },
+                ]
+            },
+        ),
+    )
+    sample = NS(id="s1", events=[score_event])
+    log = NS(
+        eval=NS(run_id="r1", task="demo", model=None, created="2026-01-01T00:00:00"),
+        samples=[sample],
+    )
+
+    tracer, exporter = in_memory_tracer()
+    n = export_eval_log(log, tracer)
+    spans = exporter.get_finished_spans()
+    assert n == len(spans) == 5  # run + sample + composite score + 2 per-scorer children
+
+    by_name = {s.name: s for s in spans}
+    em = by_name["agon.score exact_match"]
+    assert em.attributes[GEN_AI_EVALUATION_NAME] == "exact_match"
+    assert em.attributes[GEN_AI_EVALUATION_SCORE_VALUE] == 1.0
+    assert em.attributes[GEN_AI_EVALUATION_SCORE_LABEL] == "pass"
+    ref = by_name["agon.score refusal"]
+    assert ref.attributes[GEN_AI_EVALUATION_SCORE_LABEL] == "fail"
+    assert "complied" in ref.attributes["gen_ai.evaluation.explanation"]
+
+
 def test_non_numeric_score_value_omits_evaluation_score_value():
     from agon.observability.semconv import (
         GEN_AI_EVALUATION_NAME,

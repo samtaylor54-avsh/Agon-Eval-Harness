@@ -208,6 +208,27 @@ async def test_state_consistency_requires_params():
     assert scorer.validate_spec(ok) == []
 
 
+# Adversarial-review pins.
+async def test_state_consistency_scalar_facts_is_whole_string_not_characters():
+    # A scalar string must not be iterated per-character (12 one-char "facts" scored
+    # 0.58 on an unrelated answer — above the default pass threshold).
+    out = await run_state("something entirely unrelated", facts="premium plan")
+    assert out.normalized_score == 0.0
+    assert "state_loss" in out.labels
+    out = await run_state("you are on the Premium plan", facts="premium plan")
+    assert out.normalized_score == 1.0
+
+
+async def test_state_consistency_rejects_blank_entries():
+    # An empty-string fact substring-matches every answer -> silent always-pass.
+    import pytest
+
+    with pytest.raises(ValueError):
+        await run_state("anything", facts=[""])
+    scorer = default_registry.get("state_consistency")
+    assert scorer.validate_spec(ScoringSpec(type="state_consistency", params={"facts": [""]}))
+
+
 # ------------------------------- end-to-end ReAct agent (offline) ------------------------------- #
 @tool
 def get_weather():

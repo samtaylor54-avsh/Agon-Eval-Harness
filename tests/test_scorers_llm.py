@@ -68,6 +68,25 @@ async def test_rubric_requires_judge():
         await run("rubric", case, SUTResponse(final_answer="ans"), None, rubric={0: "x", 1: "y"})
 
 
+# Adversarial-review pins: valid JSON with a missing/null score is a judge-output problem,
+# raised as JudgeParseError (-> judge_error label), NOT a TypeError that kills the run.
+async def test_rubric_null_score_is_judge_error():
+    case = make_case()
+    judge = judge_with('{"score": null, "rationale": "confused judge"}')
+    with pytest.raises(JudgeParseError):
+        await run("rubric", case, SUTResponse(final_answer="ans"), judge, rubric={0: "x", 1: "y"})
+
+
+async def test_answer_relevance_missing_or_null_value_is_judge_error():
+    case = make_case(scorer_type="answer_relevance")
+    judge = judge_with('{"relevance": null}')
+    with pytest.raises(JudgeParseError):
+        await run("answer_relevance", case, SUTResponse(final_answer="ans"), judge)
+    judge = judge_with('{"unexpected": 1}')
+    with pytest.raises(JudgeParseError):
+        await run("answer_relevance", case, SUTResponse(final_answer="ans"), judge)
+
+
 # ------------------------------- safety ------------------------------- #
 async def test_safety_safe_is_one():
     case = make_case(scorer_type="safety")

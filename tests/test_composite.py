@@ -156,6 +156,40 @@ def test_agon_scorer_contains_scorer_errors(tmp_path):
     assert "scorer_error" in scores["boom"]["labels"]
 
 
+def test_agon_scorer_contains_type_errors_too(tmp_path):
+    """Adversarial-review pin: a judge returning {"score": null} used to raise TypeError,
+    which escaped the (ValueError, KeyError) containment and killed the entire run."""
+    from agon.schemas import AgonDataset
+    from agon.scoring.base import ScorerRegistry
+
+    class NullScorer:
+        scorer_type = "nullboom"
+        requires_judge = False
+
+        async def score(self, case, response, spec, *, judge=None) -> ScoreOutcome:
+            return int(None)  # TypeError, the exact shape of int(result["score"]) on null
+
+    registry = ScorerRegistry()
+    registry.register(NullScorer())
+    case = AgonCase(
+        test_id="null_001", name="n", category="c", input={"user_message": "q"},
+        scoring=[ScoringSpec(type="nullboom")],
+    )
+    dataset = AgonDataset(name="nullboom", dataset_version="test", test_cases=[case])
+
+    async def sut(req: SUTRequest) -> SUTResponse:
+        return SUTResponse(final_answer="fine")
+
+    task = Task(
+        dataset=to_samples(dataset),
+        solver=callable_solver(sut),
+        scorer=agon_scorer(registry=registry),
+    )
+    log = eval(task, model="mockllm/model", log_dir=str(tmp_path), display="none")[0]
+    assert log.status == "success"  # previously "error": run dead, zero samples scored
+    assert log.samples[0].score.metadata["errored"] is True
+
+
 # ------------------------------- end-to-end orchestration ------------------------------- #
 def test_agon_scorer_end_to_end(tmp_path):
     dataset = load_dataset(FIXTURES / "mini.yaml")

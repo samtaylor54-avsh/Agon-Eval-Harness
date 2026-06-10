@@ -111,14 +111,36 @@ class StateConsistencyScorer:
     scorer_type = "state_consistency"
     requires_judge = False
 
+    @staticmethod
+    def _string_list(raw: object, name: str) -> list[str]:
+        """Accept a single string or a list of strings; reject blanks/non-strings —
+        an empty-string entry would substring-match every answer (silent always-pass)."""
+        items = [raw] if isinstance(raw, str) else (raw or [])
+        if not isinstance(items, list) or any(
+            not isinstance(s, str) or not s.strip() for s in items
+        ):
+            raise ValueError(
+                f"state_consistency params.{name} must be a non-empty string "
+                f"or a list of non-empty strings"
+            )
+        return [s.lower() for s in items]
+
     def validate_spec(self, spec) -> list[str]:
-        if not spec.params.get("facts") and not spec.params.get("contradictions"):
-            return ["state_consistency requires params.facts and/or params.contradictions"]
-        return []
+        problems: list[str] = []
+        try:
+            facts = self._string_list(spec.params.get("facts"), "facts")
+            contradictions = self._string_list(spec.params.get("contradictions"), "contradictions")
+            if not facts and not contradictions:
+                problems.append(
+                    "state_consistency requires params.facts and/or params.contradictions"
+                )
+        except ValueError as exc:
+            problems.append(str(exc))
+        return problems
 
     async def score(self, case, response, spec, *, judge=None) -> ScoreOutcome:
-        facts = [str(f).lower() for f in spec.params.get("facts", [])]
-        contradictions = [str(c).lower() for c in spec.params.get("contradictions", [])]
+        facts = self._string_list(spec.params.get("facts"), "facts")
+        contradictions = self._string_list(spec.params.get("contradictions"), "contradictions")
         if not facts and not contradictions:
             raise ValueError(
                 "state_consistency scorer requires params.facts and/or params.contradictions"

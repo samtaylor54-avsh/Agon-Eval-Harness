@@ -261,7 +261,64 @@ async def test_numeric_tolerance_non_numeric_expected_is_zero():
     case = make_case(ExpectedBehavior(expected_answer="forty-two"), "numeric_tolerance")
     out = await run("numeric_tolerance", case, resp("42"))
     assert out.normalized_score == 0.0
-    assert "not numeric" in (out.rationale or "")
+    assert "not a finite number" in (out.rationale or "")
+
+
+# Adversarial-review pins: hyphen-adjacent text must not read as negative numbers.
+async def test_numeric_tolerance_range_text():
+    case = make_case(ExpectedBehavior(), "numeric_tolerance")
+    out = await run("numeric_tolerance", case, resp("estimated 40-44 units"), expected=44)
+    assert out.normalized_score == 1.0  # was wrongly 0.0: "-44" extracted instead of 44
+    assert 40.0 in out.details["candidates"] and 44.0 in out.details["candidates"]
+
+
+async def test_numeric_tolerance_id_suffix_is_not_negative():
+    case = make_case(ExpectedBehavior(), "numeric_tolerance")
+    out = await run("numeric_tolerance", case, resp("see ticket ABC-1234"), expected=-1234)
+    assert out.normalized_score == 0.0  # was wrongly passing via "-1234"
+
+
+async def test_numeric_tolerance_leading_negative_still_works():
+    case = make_case(ExpectedBehavior(), "numeric_tolerance")
+    out = await run("numeric_tolerance", case, resp("the delta is -7.5 degrees"), expected=-7.5)
+    assert out.normalized_score == 1.0
+
+
+async def test_numeric_tolerance_thousands_separators():
+    case = make_case(ExpectedBehavior(), "numeric_tolerance")
+    out = await run("numeric_tolerance", case, resp("total: $1,234.56"), expected=1234.56)
+    assert out.normalized_score == 1.0  # was wrongly split into [1.0, 234.56]
+
+
+async def test_numeric_tolerance_list_commas_not_merged():
+    case = make_case(ExpectedBehavior(), "numeric_tolerance")
+    out = await run("numeric_tolerance", case, resp("options are 1,2,3"), expected=2)
+    assert out.normalized_score == 1.0  # "1,2,3" must stay three numbers, not become 123
+
+
+async def test_numeric_tolerance_rejects_non_finite_and_bool_expected():
+    case = make_case(ExpectedBehavior(), "numeric_tolerance")
+    # expected "inf" + rel_tol would make tolerance infinite -> everything passes
+    out = await run(
+        "numeric_tolerance", case, resp("the answer is 7"), expected="inf", rel_tol=0.01
+    )
+    assert out.normalized_score == 0.0
+    out = await run("numeric_tolerance", case, resp("1"), expected=True)
+    assert out.normalized_score == 0.0
+    scorer = default_registry.get("numeric_tolerance")
+    assert scorer.validate_spec(spec("numeric_tolerance", expected="inf"))
+    assert scorer.validate_spec(spec("numeric_tolerance", expected="nan"))
+    assert scorer.validate_spec(spec("numeric_tolerance", expected=True))
+    assert scorer.validate_spec(spec("numeric_tolerance", expected=42)) == []
+
+
+async def test_regex_match_non_string_pattern_is_preflight_problem_not_crash():
+    case = make_case(ExpectedBehavior(), "regex_match")
+    scorer = default_registry.get("regex_match")
+    problems = scorer.validate_spec(spec("regex_match", pattern=404))  # YAML int, easy mistake
+    assert problems and "string" in problems[0]  # was: TypeError traceback, wrong exit code
+    with pytest.raises(ValueError):
+        await scorer.score(case, resp("404"), spec("regex_match", pattern=404))
 
 
 # ------------------------------- semantic (gated) ------------------------------- #
