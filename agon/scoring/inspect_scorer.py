@@ -46,7 +46,7 @@ def agon_scorer(
                     rationale=f"judge error: {exc}",
                     labels=["judge_error"],
                 )
-            except (ValueError, KeyError) as exc:
+            except (ValueError, KeyError, TypeError) as exc:
                 # A misconfigured or crashing scorer fails this case, not the whole run.
                 errored = True
                 outcome = ScoreOutcome(

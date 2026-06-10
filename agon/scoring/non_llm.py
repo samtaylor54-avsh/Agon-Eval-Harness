@@ -7,6 +7,7 @@ These run on the offline path with no API key and no model downloads (except
 from __future__ import annotations
 
 import json
+import math
 import re
 
 from agon.scoring.base import ScoreOutcome, collapse_ws, register
@@ -170,8 +171,8 @@ class RegexMatchScorer:
 
     def validate_spec(self, spec) -> list[str]:
         pattern = spec.params.get("pattern")
-        if not pattern:
-            return ["regex_match requires params.pattern"]
+        if not pattern or not isinstance(pattern, str):
+            return ["regex_match requires params.pattern (a non-empty string)"]
         try:
             re.compile(pattern)
         except re.error as exc:
@@ -180,8 +181,8 @@ class RegexMatchScorer:
 
     async def score(self, case, response, spec, *, judge=None) -> ScoreOutcome:
         pattern = spec.params.get("pattern")
-        if not pattern:
-            raise ValueError("regex_match scorer requires params.pattern")
+        if not pattern or not isinstance(pattern, str):
+            raise ValueError("regex_match scorer requires params.pattern (a non-empty string)")
         flags = 0 if spec.params.get("case_sensitive", False) else re.IGNORECASE
         full = bool(spec.params.get("full_match", False))
         compiled = re.compile(pattern, flags)
@@ -198,7 +199,19 @@ class RegexMatchScorer:
         )
 
 
-_NUMBER = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?")
+# A minus only counts as a sign after a boundary (start/whitespace/bracket/operator) — so
+# "40-44" yields [40, 44] and "ABC-1234" yields [1234], not [-44] / [-1234].
+_NUMBER = re.compile(
+    r"(?:(?<![\S])|(?<=[([{=<>:,~+]))-\d+(?:\.\d+)?(?:[eE][+-]?\d+)?"
+    r"|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?"
+)
+# Thousands separators: a comma between a digit and a 3-digit group ("1,234.56" -> "1234.56"),
+# leaving list-like "1,2,3" untouched.
+_THOUSANDS = re.compile(r"(?<=\d),(?=\d{3}(?:\D|$))")
+
+
+def _extract_numbers(text: str) -> list[float]:
+    return [float(m) for m in _NUMBER.findall(_THOUSANDS.sub("", text))]
 
 
 @register
@@ -215,10 +228,14 @@ class NumericToleranceScorer:
     def validate_spec(self, spec) -> list[str]:
         expected = spec.params.get("expected")
         if expected is not None:
+            if isinstance(expected, bool):
+                return ["numeric_tolerance params.expected must be numeric, not a boolean"]
             try:
-                float(expected)
+                value = float(expected)
             except (TypeError, ValueError):
                 return ["numeric_tolerance params.expected must be numeric"]
+            if not math.isfinite(value):
+                return ["numeric_tolerance params.expected must be finite (not inf/nan)"]
         return []
 
     async def score(self, case, response, spec, *, judge=None) -> ScoreOutcome:
@@ -231,18 +248,22 @@ class NumericToleranceScorer:
                 rationale="no expected value (params.expected or expected.expected_answer)",
             )
         try:
+            if isinstance(raw_expected, bool):
+                raise ValueError("boolean is not numeric")
             expected = float(raw_expected)
+            if not math.isfinite(expected):
+                raise ValueError("expected must be finite")
         except (TypeError, ValueError):
             return ScoreOutcome(
                 scorer_type=self.scorer_type,
                 native_score=False,
                 normalized_score=0.0,
-                rationale=f"expected value {raw_expected!r} is not numeric",
+                rationale=f"expected value {raw_expected!r} is not a finite number",
             )
         abs_tol = float(spec.params.get("abs_tol", 1e-9))
         rel_tol = float(spec.params.get("rel_tol", 0.0))
         tolerance = max(abs_tol, rel_tol * abs(expected))
-        candidates = [float(m) for m in _NUMBER.findall(response.final_answer or "")]
+        candidates = _extract_numbers(response.final_answer or "")
         matched = any(abs(c - expected) <= tolerance for c in candidates)
         closest = min((abs(c - expected) for c in candidates), default=None)
         return ScoreOutcome(

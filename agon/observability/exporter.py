@@ -76,7 +76,7 @@ def _strval(value: Any) -> str:
     return redact(s)
 
 
-def _emit_model(tracer: Any, ctx: Any, e: Any) -> int:
+def _emit_model(tracer: Any, ctx: Any, e: Any) -> tuple[int, int]:
     start = _ns(e.timestamp)
     end = _ns(getattr(e, "completed", None)) or (start + _MIN_DUR_NS)
     model = e.model or "unknown"
@@ -92,10 +92,10 @@ def _emit_model(tracer: Any, ctx: Any, e: Any) -> int:
         attrs[GEN_AI_USAGE_OUTPUT_TOKENS] = int(usage.output_tokens or 0)
     span = tracer.start_span(f"chat {model}", context=ctx, start_time=start, attributes=attrs)
     span.end(end_time=end)
-    return end
+    return end, 1
 
 
-def _emit_tool(tracer: Any, ctx: Any, e: Any) -> int:
+def _emit_tool(tracer: Any, ctx: Any, e: Any) -> tuple[int, int]:
     start = _ns(e.timestamp)
     end = _ns(getattr(e, "completed", None)) or (start + _MIN_DUR_NS)
     name = getattr(e, "function", None) or "tool"
@@ -108,10 +108,10 @@ def _emit_tool(tracer: Any, ctx: Any, e: Any) -> int:
     if getattr(e, "error", None):
         span.set_status(Status(StatusCode.ERROR, redact(str(e.error))))
     span.end(end_time=end)
-    return end
+    return end, 1
 
 
-def _emit_score(tracer: Any, ctx: Any, e: Any) -> int:
+def _emit_score(tracer: Any, ctx: Any, e: Any) -> tuple[int, int]:
     start = _ns(e.timestamp)
     end = start + _MIN_DUR_NS
     scorer = getattr(e, "scorer", None) or "scorer"
@@ -133,7 +133,32 @@ def _emit_score(tracer: Any, ctx: Any, e: Any) -> int:
         f"agon.score {scorer}", context=ctx, start_time=start, attributes=attrs
     )
     span.end(end_time=end)
-    return end
+    # One child span per individual scorer result, so gen_ai.evaluation.name carries the
+    # actual scorer type (exact_match, refusal, ...) — the composite span alone would pin
+    # every evaluation to the constant "agon_scorer".
+    count = 1
+    metadata = getattr(score, "metadata", None) or {}
+    for s in metadata.get("scores") or []:
+        if not isinstance(s, dict):
+            continue
+        stype = s.get("scorer_type") or "scorer"
+        sub_attrs: dict[str, Any] = {GEN_AI_EVALUATION_NAME: stype, AGON_SCORER: stype}
+        normalized = s.get("normalized_score")
+        if isinstance(normalized, bool | int | float):
+            sub_attrs[GEN_AI_EVALUATION_SCORE_VALUE] = float(normalized)
+            sub_attrs[AGON_SCORE_VALUE] = _strval(normalized)
+        passed = s.get("passed")
+        if isinstance(passed, bool):
+            sub_attrs[GEN_AI_EVALUATION_SCORE_LABEL] = "pass" if passed else "fail"
+        rationale = s.get("rationale")
+        if rationale:
+            sub_attrs[GEN_AI_EVALUATION_EXPLANATION] = redact(str(rationale))
+        sub = tracer.start_span(
+            f"agon.score {stype}", context=ctx, start_time=start, attributes=sub_attrs
+        )
+        sub.end(end_time=end)
+        count += 1
+    return end, count
 
 
 _EMITTERS = {"model": _emit_model, "tool": _emit_tool, "score": _emit_score}
@@ -229,8 +254,9 @@ def export_eval_log(log: Any, tracer: Any, *, digest: Any = None) -> int:
         for e in events:
             emitter = _EMITTERS.get(e.event)
             if emitter is not None:
-                s_end = max(s_end, emitter(tracer, s_ctx, e))
-                spans += 1
+                e_end, e_count = emitter(tracer, s_ctx, e)
+                s_end = max(s_end, e_end)
+                spans += e_count
         sample_span.end(end_time=s_end)
         run_end = max(run_end, s_end)
 

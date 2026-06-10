@@ -14,7 +14,7 @@ from __future__ import annotations
 from jinja2 import Template
 
 from agon.scoring.base import ScoreOutcome, register
-from agon.scoring.judge import JudgeClient
+from agon.scoring.judge import JudgeClient, JudgeParseError
 
 RETRIEVAL_SCORERS = {"faithfulness", "context_precision", "answer_relevance"}
 
@@ -89,7 +89,14 @@ class RubricScorer:
             rubric=dict(sorted(rubric.items())),
         )
         result = await judge.generate_json(prompt)
-        score = int(result["score"])
+        raw_score = result.get("score")
+        try:
+            score = int(raw_score)
+        except (TypeError, ValueError) as exc:
+            # Valid JSON but a missing/null/non-integer score is a judge-output problem.
+            raise JudgeParseError(
+                f"judge returned missing/invalid 'score': {raw_score!r}"
+            ) from exc
         max_rubric = max(rubric)
         normalized = _clamp(score / max_rubric) if max_rubric else 0.0
         return ScoreOutcome(
@@ -289,7 +296,13 @@ class AnswerRelevanceScorer:
                 final_answer=response.final_answer,
             )
         )
-        relevance = float(result.get("relevance", 0.0))
+        raw_relevance = result.get("relevance")
+        try:
+            relevance = float(raw_relevance)
+        except (TypeError, ValueError) as exc:
+            raise JudgeParseError(
+                f"judge returned missing/invalid 'relevance': {raw_relevance!r}"
+            ) from exc
         return ScoreOutcome(
             scorer_type=self.scorer_type,
             native_score=relevance,
