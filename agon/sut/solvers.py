@@ -34,12 +34,14 @@ SUTCallable = Callable[[SUTRequest], Awaitable[SUTResponse]]
 
 def _build_request(state: TaskState) -> SUTRequest:
     meta = state.metadata or {}
+    case_input = (meta.get(METADATA_CASE_KEY) or {}).get("input") or {}
     documents = list(meta.get("documents", []) or [])
     session_id = f"{state.sample_id}_{getattr(state, 'epoch', 1)}"
     return SUTRequest(
         user_message=state.input_text,
         documents=documents,
         session_id=session_id,
+        config_overrides=dict(case_input.get("config_overrides") or {}),
     )
 
 

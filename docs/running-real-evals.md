@@ -13,7 +13,8 @@ uv sync --extra providers                  # install the provider SDKs
 uv run agon run examples/datasets/rag_smoke.yaml --model anthropic/claude-sonnet-4-5
 ```
 
-`--model <provider>/<model>` switches the SUT adapter from `mockllm` to `litellm` automatically.
+`--model <provider>/<model>` switches the SUT adapter from `mockllm` to `litellm` automatically —
+but only when no `--adapter` is given; an explicit `--adapter` (e.g. `http`) always wins.
 
 ### Use a `.env` instead of exporting (optional)
 

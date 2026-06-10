@@ -34,6 +34,45 @@ def test_run_emits_artifacts_and_gate_code(tmp_path):
     assert "Agon Eval Report" in md[0].read_text(encoding="utf-8")
 
 
+def test_scorers_command_lists_builtins():
+    result = runner.invoke(app, ["scorers"])
+    assert result.exit_code == 0, result.output
+    for name in (
+        "exact_match", "regex_match", "numeric_tolerance",
+        "refusal", "state_consistency", "rubric",
+    ):
+        assert name in result.output
+    assert "judge-backed" in result.output  # rubric et al.
+    assert "offline" in result.output
+
+
+BAD_PARAMS_DATASET = """
+name: bad_params_demo
+test_cases:
+  - test_id: bp_001
+    name: regex without a pattern
+    category: demo
+    input:
+      user_message: "hi"
+    scoring:
+      - {type: regex_match, weight: 1.0, pass_threshold: 1.0}
+"""
+
+
+def test_run_aborts_on_invalid_scorer_params(tmp_path):
+    ds = tmp_path / "bad.yaml"
+    ds.write_text(BAD_PARAMS_DATASET, encoding="utf-8")
+    result = runner.invoke(
+        app,
+        ["run", str(ds), "--log-dir", str(tmp_path / "logs"),
+         "--report-dir", str(tmp_path / "reports"), "--display", "none"],
+    )
+    assert result.exit_code == 2, result.output
+    assert "invalid scorer params" in result.output
+    assert "bp_001" in result.output
+    assert "params.pattern" in result.output
+
+
 def test_report_command_regenerates(tmp_path):
     logs = tmp_path / "logs"
     reports = tmp_path / "reports"

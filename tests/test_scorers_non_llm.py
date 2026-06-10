@@ -162,6 +162,108 @@ async def test_citation_not_required_no_citations_passes():
     assert out.normalized_score == 1.0
 
 
+async def test_citation_out_of_scope_native_keeps_ungated_signal():
+    # The out-of-scope gate zeroes normalized only; native carries the raw signal.
+    case = make_case(
+        ExpectedBehavior(citation_required=True, allowed_sources=["hr.pdf"]),
+        "citation_check",
+    )
+    out = await run("citation_check", case, resp(citations=["unrelated.pdf#1"]))
+    assert out.normalized_score == 0.0
+    assert out.native_score == 1.0  # present + (vacuously) correct, just out of scope
+
+
+# ------------------------------- regex_match ------------------------------- #
+async def test_regex_match_search_pass():
+    case = make_case(ExpectedBehavior(), "regex_match")
+    out = await run("regex_match", case, resp("Order ID: ABC-1234 confirmed"), pattern=r"abc-\d{4}")
+    assert out.normalized_score == 1.0  # case-insensitive by default
+    assert out.labels == []
+
+
+async def test_regex_match_fail_labels_pattern_mismatch():
+    case = make_case(ExpectedBehavior(), "regex_match")
+    out = await run("regex_match", case, resp("no id here"), pattern=r"abc-\d{4}")
+    assert out.normalized_score == 0.0
+    assert "pattern_mismatch" in out.labels
+
+
+async def test_regex_match_case_sensitive():
+    case = make_case(ExpectedBehavior(), "regex_match")
+    out = await run(
+        "regex_match", case, resp("abc-1234"), pattern=r"ABC-\d{4}", case_sensitive=True
+    )
+    assert out.normalized_score == 0.0
+
+
+async def test_regex_match_full_match():
+    case = make_case(ExpectedBehavior(), "regex_match")
+    out = await run("regex_match", case, resp("  yes  "), pattern=r"yes|no", full_match=True)
+    assert out.normalized_score == 1.0
+    out = await run(
+        "regex_match", case, resp("well, yes and no"), pattern=r"yes|no", full_match=True
+    )
+    assert out.normalized_score == 0.0
+
+
+async def test_regex_match_missing_pattern_raises_and_preflight_catches():
+    case = make_case(ExpectedBehavior(), "regex_match")
+    scorer = default_registry.get("regex_match")
+    with pytest.raises(ValueError):
+        await scorer.score(case, resp("x"), spec("regex_match"))
+    assert scorer.validate_spec(spec("regex_match"))  # non-empty problem list
+    assert scorer.validate_spec(spec("regex_match", pattern="[unclosed"))
+    assert scorer.validate_spec(spec("regex_match", pattern=r"\d+")) == []
+
+
+# ------------------------------- numeric_tolerance ------------------------------- #
+async def test_numeric_tolerance_exact():
+    case = make_case(ExpectedBehavior(expected_answer="42"), "numeric_tolerance")
+    out = await run("numeric_tolerance", case, resp("The answer is 42."))
+    assert out.normalized_score == 1.0
+
+
+async def test_numeric_tolerance_within_abs_tol():
+    case = make_case(ExpectedBehavior(), "numeric_tolerance")
+    out = await run("numeric_tolerance", case, resp("roughly 3.15"), expected=3.14159, abs_tol=0.01)
+    assert out.normalized_score == 1.0
+
+
+async def test_numeric_tolerance_within_rel_tol():
+    case = make_case(ExpectedBehavior(), "numeric_tolerance")
+    out = await run("numeric_tolerance", case, resp("about 102"), expected=100, rel_tol=0.05)
+    assert out.normalized_score == 1.0
+
+
+async def test_numeric_tolerance_outside_tolerance():
+    case = make_case(ExpectedBehavior(), "numeric_tolerance")
+    out = await run("numeric_tolerance", case, resp("the total is 99"), expected=42, abs_tol=0.5)
+    assert out.normalized_score == 0.0
+    assert "numeric_mismatch" in out.labels
+    assert out.details["closest_abs_diff"] == pytest.approx(57.0)
+
+
+async def test_numeric_tolerance_no_number_in_answer():
+    case = make_case(ExpectedBehavior(), "numeric_tolerance")
+    out = await run("numeric_tolerance", case, resp("I do not know"), expected=42)
+    assert out.normalized_score == 0.0
+    assert out.details["candidates"] == []
+
+
+async def test_numeric_tolerance_no_expected_is_zero_with_rationale():
+    case = make_case(ExpectedBehavior(), "numeric_tolerance")
+    out = await run("numeric_tolerance", case, resp("42"))
+    assert out.normalized_score == 0.0
+    assert "no expected value" in (out.rationale or "")
+
+
+async def test_numeric_tolerance_non_numeric_expected_is_zero():
+    case = make_case(ExpectedBehavior(expected_answer="forty-two"), "numeric_tolerance")
+    out = await run("numeric_tolerance", case, resp("42"))
+    assert out.normalized_score == 0.0
+    assert "not numeric" in (out.rationale or "")
+
+
 # ------------------------------- semantic (gated) ------------------------------- #
 async def test_semantic_similarity_identical():
     pytest.importorskip("sentence_transformers")

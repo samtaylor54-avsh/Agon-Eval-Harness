@@ -155,6 +155,59 @@ async def test_step_efficiency_clean():
     assert out.normalized_score == 1.0
 
 
+# ------------------------------- state_consistency ------------------------------- #
+async def run_state(answer: str, **params):
+    case = make_case(ExpectedBehavior())
+    s = ScoringSpec(type="state_consistency", params=params)
+    return await default_registry.get("state_consistency").score(
+        case, SUTResponse(final_answer=answer, tool_calls=[]), s
+    )
+
+
+async def test_state_consistency_all_facts_recalled():
+    out = await run_state(
+        "Per your Premium plan, the deductible is $500.",
+        facts=["premium plan", "$500"],
+    )
+    assert out.normalized_score == 1.0
+    assert out.labels == []
+
+
+async def test_state_consistency_partial_recall_is_state_loss():
+    out = await run_state("Your deductible is $500.", facts=["premium plan", "$500"])
+    assert out.normalized_score == 0.5
+    assert "state_loss" in out.labels
+
+
+async def test_state_consistency_contradiction_gates_to_zero():
+    out = await run_state(
+        "You are on the Basic plan with a $500 deductible.",
+        facts=["$500"],
+        contradictions=["basic plan"],
+    )
+    assert out.normalized_score == 0.0
+    assert "state_contradiction" in out.labels
+    assert out.details["contradicted"] == ["basic plan"]
+
+
+async def test_state_consistency_contradictions_only():
+    out = await run_state("All good.", contradictions=["basic plan"])
+    assert out.normalized_score == 1.0
+
+
+async def test_state_consistency_requires_params():
+    import pytest
+
+    case = make_case(ExpectedBehavior())
+    scorer = default_registry.get("state_consistency")
+    empty = ScoringSpec(type="state_consistency")
+    with pytest.raises(ValueError):
+        await scorer.score(case, SUTResponse(final_answer="x", tool_calls=[]), empty)
+    assert scorer.validate_spec(empty)  # pre-flight catches the same misconfig
+    ok = ScoringSpec(type="state_consistency", params={"facts": ["a"]})
+    assert scorer.validate_spec(ok) == []
+
+
 # ------------------------------- end-to-end ReAct agent (offline) ------------------------------- #
 @tool
 def get_weather():

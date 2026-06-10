@@ -115,6 +115,47 @@ def test_flake_reducer_majority():
     assert reducer([Score(value=1.0), Score(value=0.0), Score(value=0.0)]).value == 0
 
 
+# ------------------------------- scorer-error containment ------------------------------- #
+def test_agon_scorer_contains_scorer_errors(tmp_path):
+    """A scorer that raises ValueError fails its case (errored + scorer_error label)
+    instead of aborting the run."""
+    from agon.schemas import AgonDataset
+    from agon.scoring.base import ScorerRegistry
+
+    class BoomScorer:
+        scorer_type = "boom"
+        requires_judge = False
+
+        async def score(self, case, response, spec, *, judge=None) -> ScoreOutcome:
+            raise ValueError("misconfigured on purpose")
+
+    registry = ScorerRegistry()
+    registry.register(BoomScorer())
+
+    case = AgonCase(
+        test_id="boom_001", name="n", category="c", input={"user_message": "q"},
+        scoring=[ScoringSpec(type="boom")],
+    )
+    dataset = AgonDataset(name="boom", dataset_version="test", test_cases=[case])
+
+    async def sut(req: SUTRequest) -> SUTResponse:
+        return SUTResponse(final_answer="fine")
+
+    task = Task(
+        dataset=to_samples(dataset),
+        solver=callable_solver(sut),
+        scorer=agon_scorer(registry=registry),
+    )
+    log = eval(task, model="mockllm/model", log_dir=str(tmp_path), display="none")[0]
+    assert log.status == "success"  # the run survives
+    score = log.samples[0].score
+    assert score.value == 0.0
+    assert score.metadata["errored"] is True
+    scores = {s["scorer_type"]: s for s in score.metadata["scores"]}
+    assert "scorer error: misconfigured on purpose" in scores["boom"]["rationale"]
+    assert "scorer_error" in scores["boom"]["labels"]
+
+
 # ------------------------------- end-to-end orchestration ------------------------------- #
 def test_agon_scorer_end_to_end(tmp_path):
     dataset = load_dataset(FIXTURES / "mini.yaml")

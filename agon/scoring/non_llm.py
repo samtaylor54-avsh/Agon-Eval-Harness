@@ -7,6 +7,7 @@ These run on the offline path with no API key and no model downloads (except
 from __future__ import annotations
 
 import json
+import re
 
 from agon.scoring.base import ScoreOutcome, collapse_ws, register
 
@@ -162,6 +163,102 @@ class SemanticSimilarityScorer:
         )
 
 
+@register
+class RegexMatchScorer:
+    scorer_type = "regex_match"
+    requires_judge = False
+
+    def validate_spec(self, spec) -> list[str]:
+        pattern = spec.params.get("pattern")
+        if not pattern:
+            return ["regex_match requires params.pattern"]
+        try:
+            re.compile(pattern)
+        except re.error as exc:
+            return [f"regex_match params.pattern is not a valid regex: {exc}"]
+        return []
+
+    async def score(self, case, response, spec, *, judge=None) -> ScoreOutcome:
+        pattern = spec.params.get("pattern")
+        if not pattern:
+            raise ValueError("regex_match scorer requires params.pattern")
+        flags = 0 if spec.params.get("case_sensitive", False) else re.IGNORECASE
+        full = bool(spec.params.get("full_match", False))
+        compiled = re.compile(pattern, flags)
+        answer = response.final_answer or ""
+        matched = bool(
+            compiled.fullmatch(answer.strip()) if full else compiled.search(answer)
+        )
+        return ScoreOutcome(
+            scorer_type=self.scorer_type,
+            native_score=matched,
+            normalized_score=1.0 if matched else 0.0,
+            labels=[] if matched else ["pattern_mismatch"],
+            details={"pattern": pattern, "full_match": full},
+        )
+
+
+_NUMBER = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?")
+
+
+@register
+class NumericToleranceScorer:
+    """Pass iff the answer contains a number within tolerance of the expected value.
+
+    Expected comes from ``params.expected`` (falling back to ``expected.expected_answer``);
+    tolerance is ``max(abs_tol, rel_tol * |expected|)``.
+    """
+
+    scorer_type = "numeric_tolerance"
+    requires_judge = False
+
+    def validate_spec(self, spec) -> list[str]:
+        expected = spec.params.get("expected")
+        if expected is not None:
+            try:
+                float(expected)
+            except (TypeError, ValueError):
+                return ["numeric_tolerance params.expected must be numeric"]
+        return []
+
+    async def score(self, case, response, spec, *, judge=None) -> ScoreOutcome:
+        raw_expected = spec.params.get("expected", case.expected.expected_answer)
+        if raw_expected is None:
+            return ScoreOutcome(
+                scorer_type=self.scorer_type,
+                native_score=False,
+                normalized_score=0.0,
+                rationale="no expected value (params.expected or expected.expected_answer)",
+            )
+        try:
+            expected = float(raw_expected)
+        except (TypeError, ValueError):
+            return ScoreOutcome(
+                scorer_type=self.scorer_type,
+                native_score=False,
+                normalized_score=0.0,
+                rationale=f"expected value {raw_expected!r} is not numeric",
+            )
+        abs_tol = float(spec.params.get("abs_tol", 1e-9))
+        rel_tol = float(spec.params.get("rel_tol", 0.0))
+        tolerance = max(abs_tol, rel_tol * abs(expected))
+        candidates = [float(m) for m in _NUMBER.findall(response.final_answer or "")]
+        matched = any(abs(c - expected) <= tolerance for c in candidates)
+        closest = min((abs(c - expected) for c in candidates), default=None)
+        return ScoreOutcome(
+            scorer_type=self.scorer_type,
+            native_score=matched,
+            normalized_score=1.0 if matched else 0.0,
+            labels=[] if matched else ["numeric_mismatch"],
+            details={
+                "expected": expected,
+                "tolerance": tolerance,
+                "candidates": candidates,
+                "closest_abs_diff": closest,
+            },
+        )
+
+
 def _source_of(citation: str) -> str:
     """Strip a citation fragment: 'doc.pdf#section-4.2' -> 'doc.pdf'."""
     return citation.split("#", 1)[0]
@@ -193,10 +290,12 @@ class CitationCheckScorer:
         if out_of_scope:
             labels.append("wrong_citation")
 
-        normalized = 0.0 if out_of_scope else (presence + correctness) / 2
+        # native carries the un-gated signal; the out-of-scope gate only zeroes normalized
+        raw = (presence + correctness) / 2
+        normalized = 0.0 if out_of_scope else raw
         return ScoreOutcome(
             scorer_type=self.scorer_type,
-            native_score=normalized,
+            native_score=raw,
             normalized_score=_clamp(normalized),
             labels=labels,
             details={

@@ -20,16 +20,19 @@ A dataset is a YAML file: a `name` plus a list of `test_cases`. Each case:
 - `expected` -- references the scorer checks (`expected_answer`, `answer_contains`,
   `allowed_sources`, `citation_required`, `json_schema`, ...)
 - `scoring` -- one or more `{type, weight, pass_threshold, params}` specs; `type` must name a
-  registered scorer (`uv run agon run --help` lists the built-ins, or see `agon/scoring/`)
+  registered scorer (`uv run agon scorers` lists the built-ins plus any `--plugin` extras, or
+  see `agon/scoring/`)
 - `failure_labels` -- the labels a failing case may surface (intersected with what scorers emit)
 
 Run and validate it:
 
     uv run agon run path/to/your_dataset.yaml --display none
 
-Built-in scorers include `exact_match`, `keyword_containment`, `citation_check`, `json_schema`,
-and judge-backed ones (`rubric`, `safety`, `faithfulness`, ...) that need a real provider. See
-`examples/datasets/rag_smoke.yaml` for a 20-case reference.
+Built-in scorers include `exact_match`, `regex_match`, `numeric_tolerance`,
+`keyword_containment`, `citation_check`, `json_schema`, agent-trajectory ones (`tool_use`,
+`planning`, `step_efficiency`, `state_consistency`), offline safety ones (`refusal`,
+`injection_resistance`), and judge-backed ones (`rubric`, `safety`, `faithfulness`, ...) that
+need a real provider. See `examples/datasets/rag_smoke.yaml` for a 20-case reference.
 
 **The test you owe:** none for data alone -- but if a case encodes a real failure you found, that
 *is* the regression test (failure is data).
@@ -60,6 +63,10 @@ class MyScorer:
 
 `ScoreOutcome` fields: `scorer_type`, `native_score` (raw value), `normalized_score` (0..1, the
 number that gates the case), `labels` (failure labels), `rationale`, `details`.
+
+If your scorer needs params (like `rubric` or `regex_match` do), also give it a
+`validate_spec(spec) -> list[str]` method returning human-readable problems — the CLI runs it
+pre-flight, so a misconfigured dataset aborts before any model call instead of erroring mid-run.
 
 **Use it from the CLI** without touching agon's source -- point `--plugin` at your module (a dotted
 name on `sys.path`) or your `.py` file:

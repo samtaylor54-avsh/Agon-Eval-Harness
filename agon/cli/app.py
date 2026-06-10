@@ -1,6 +1,7 @@
 """``agon`` command-line interface (PRD §26 Task 11).
 
-Commands: ``run``, ``resume``, ``compare``, ``report``, ``review``, ``calibrate``.
+Commands: ``run``, ``resume``, ``compare``, ``report``, ``scorers``, ``doctor``, ``trace``,
+``retrieve``, ``review``, ``calibrate``.
 
 Exit codes (CI gating):
   0 — pass gate (recommendation PASS and no regression)
@@ -88,15 +89,24 @@ def _apply_resilience_flags(
         r.fail_on_error = _parse_fail_on_error(fail_on_error)
 
 
-def _validate_scorers(ds) -> list[str]:
-    """Return the sorted scorer types referenced by the dataset that are not registered."""
-    unknown = {
-        spec.type
-        for case in ds.test_cases
-        for spec in case.scoring
-        if not default_registry.has(spec.type)
-    }
-    return sorted(unknown)
+def _validate_scorers(ds) -> tuple[list[str], list[str]]:
+    """Pre-flight scorer validation against the dataset.
+
+    Returns (unknown scorer types, per-case spec problems). Spec problems come from each
+    scorer's optional ``validate_spec``, so misconfigured params (e.g. a rubric scorer with
+    no rubric) abort before any model call instead of erroring mid-run.
+    """
+    unknown: set[str] = set()
+    problems: list[str] = []
+    for case in ds.test_cases:
+        for spec in case.scoring:
+            if not default_registry.has(spec.type):
+                unknown.add(spec.type)
+                continue
+            validate = getattr(default_registry.get(spec.type), "validate_spec", None)
+            if validate is not None:
+                problems.extend(f"{case.test_id}: {p}" for p in validate(spec))
+    return sorted(unknown), problems
 
 
 @app.command()
@@ -176,7 +186,7 @@ def run(
         typer.echo(f"[abort] {exc}", err=True)
         raise typer.Exit(ABORT) from exc
 
-    unknown = _validate_scorers(ds)
+    unknown, spec_problems = _validate_scorers(ds)
     if unknown:
         typer.echo(
             f"[abort] unknown scorer_type(s): {', '.join(unknown)}; "
@@ -184,6 +194,10 @@ def run(
             f"did you forget --plugin <module-or-file>?",
             err=True,
         )
+        raise typer.Exit(ABORT)
+    if spec_problems:
+        for problem in spec_problems:
+            typer.echo(f"[abort] invalid scorer params - {problem}", err=True)
         raise typer.Exit(ABORT)
 
     _preflight(cfg.sut.model, cfg.sut.adapter)
@@ -355,6 +369,24 @@ def report(
     typer.echo(f"recommendation: {result['recommendation'].value}")
     for path in result["written"].values():
         typer.echo(f"  wrote {path}")
+
+
+@app.command()
+def scorers(
+    plugin: list[str] = typer.Option(  # noqa: B008
+        [], "--plugin", "-p", help="Import a scorer module (dotted name or .py path) first"
+    ),
+) -> None:
+    """List the registered scorer types (built-ins plus any --plugin extras)."""
+    try:
+        load_plugins(plugin)
+    except PluginLoadError as exc:
+        typer.echo(f"[abort] {exc}", err=True)
+        raise typer.Exit(ABORT) from exc
+    for name in default_registry.keys():
+        impl = default_registry.get(name)
+        kind = "judge-backed" if impl.requires_judge else "offline"
+        typer.echo(f"  {name:<22} {kind}")
 
 
 @app.command()
