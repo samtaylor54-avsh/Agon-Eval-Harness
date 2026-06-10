@@ -12,7 +12,7 @@
 
 ---
 
-> **Status: built and running — fully offline.** Most of the three-phase roadmap ships today and runs on your laptop with no API key and no model downloads (see [Quickstart](#quickstart-fully-offline--no-api-key-no-model-downloads)): a typed YAML case format; **15 registered scorers** (deterministic, LLM-as-judge, agent-trajectory, and adversarial); composite/flake scoring; a failure taxonomy; regression detection with Wilson confidence intervals; judge calibration against human labels (Cohen's κ); isolated retrieval evals (recall@k / MRR / nDCG); an offline OWASP-for-agents adversarial suite; OpenTelemetry trace export; resume/recovery; and a worked regulated-domain eval — all on [Inspect AI](https://inspect.aisi.org.uk/), behind an `agon` CLI. **Still pending:** full LangSmith dashboard integration, the complete OWASP Top-10, real-provider live red-teaming, a secrets manager, and the cloud/runtime layer (FastAPI/Docker/AWS). See the [Roadmap](#roadmap) for per-milestone status and [`docs/decisions/ADR-0001`](docs/decisions/ADR-0001-inspect-vs-custom.md) for the build decision.
+> **Status: built and running — fully offline.** Most of the three-phase roadmap ships today and runs on your laptop with no API key and no model downloads (see [Quickstart](#quickstart-fully-offline--no-api-key-no-model-downloads)): a typed YAML case format; **19 registered scorers** (deterministic, LLM-as-judge, agent-trajectory, and adversarial — `uv run agon scorers` lists them); composite/flake scoring; a failure taxonomy; regression detection with Wilson confidence intervals; judge calibration against human labels (Cohen's κ); isolated retrieval evals (recall@k / MRR / nDCG); an offline OWASP-for-agents adversarial suite; OpenTelemetry trace export; resume/recovery; and a worked regulated-domain eval — all on [Inspect AI](https://inspect.aisi.org.uk/), behind an `agon` CLI. **Still pending:** full LangSmith dashboard integration, the complete OWASP Top-10, real-provider live red-teaming, a secrets manager, and the cloud/runtime layer (FastAPI/Docker/AWS). See the [Roadmap](#roadmap) for per-milestone status and [`docs/decisions/ADR-0001`](docs/decisions/ADR-0001-inspect-vs-custom.md) for the build decision.
 
 ---
 
@@ -136,7 +136,7 @@ Agon-Eval-Harness/
 │   ├── schemas/              # typed case / config / result models (Pydantic v2)
 │   ├── dataset/              # YAML → Inspect Sample loader, content-addressed versioning
 │   ├── sut/                  # SUT adapters (mockllm · litellm · http · callable) + agent SUTs
-│   ├── scoring/              # 15 scorers + composite/flake rollup (incl. agent & adversarial)
+│   ├── scoring/              # 19 scorers + composite/flake rollup (incl. agent & adversarial)
 │   ├── analysis/             # eval-log digests, regression comparator, error taxonomy
 │   ├── reporting/            # Markdown / JSON / JUnit + PASS/INVESTIGATE/FAIL recommendation
 │   ├── calibrate/            # judge-vs-human agreement (Cohen's κ)
@@ -290,15 +290,15 @@ To evaluate a **real** system, point the SUT and judge at a provider via a run c
 | `schemas/` | Typed case / config / result models (Pydantic v2) |
 | `dataset/` | YAML→`Sample` loader, content-addressed `dataset_version` |
 | `sut/` | SUT adapters: `mockllm` (offline), `callable`, `http` |
-| `scoring/` | Deterministic + LLM-judge scorers (exact/keyword/citation/rubric/safety/RAG…) + `injection_resistance`, composite + flake reducers |
+| `scoring/` | Deterministic + LLM-judge scorers (exact/regex/numeric/keyword/citation/rubric/safety/RAG…) + offline safety (`refusal`, `injection_resistance`), composite + flake reducers |
 | `analysis/` | Eval-log digests + regression comparator; errors broken down by category (`timeout` / `resource` / `network` / `scorer` / `sample`) via `error_count_by_category`; dataset cases may set `sample_time_limit` for a per-case timeout independent of the run-level default |
 | `reporting/` | Markdown / JSON / JUnit-XML + PASS/FAIL/INVESTIGATE recommendation |
 | `calibrate/` | Judge-vs-human agreement (Cohen's κ) |
 | `retrieval/` | Isolated retrieval evals — BM25 + LanceDB + RRF hybrid, recall@k/MRR/nDCG/hit@k (Phase 2 M1) |
 | `sut/` (agent) | Native ReAct agent SUT + message→trajectory normalization; experimental LangGraph bridge (Phase 2 M2) |
-| `scoring/` (agent) | `tool_use` / `planning` / `step_efficiency` trajectory scorers (Phase 2 M2) |
+| `scoring/` (agent) | `tool_use` / `planning` / `step_efficiency` trajectory scorers (Phase 2 M2) + `state_consistency` session-state checks |
 | `observability/` | Export eval runs as OpenTelemetry GenAI spans → console / LangSmith / Tempo (Phase 2 M3) |
-| `cli/` | `agon run · resume · compare · report · review · calibrate · retrieve · trace` |
+| `cli/` | `agon run · resume · compare · report · scorers · review · calibrate · retrieve · trace` |
 
 ---
 

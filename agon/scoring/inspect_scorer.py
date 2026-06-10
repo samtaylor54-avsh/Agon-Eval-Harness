@@ -46,6 +46,16 @@ def agon_scorer(
                     rationale=f"judge error: {exc}",
                     labels=["judge_error"],
                 )
+            except (ValueError, KeyError) as exc:
+                # A misconfigured or crashing scorer fails this case, not the whole run.
+                errored = True
+                outcome = ScoreOutcome(
+                    scorer_type=spec.type,
+                    native_score=0.0,
+                    normalized_score=0.0,
+                    rationale=f"scorer error: {exc}",
+                    labels=["scorer_error"],
+                )
             outcomes.append((spec, outcome))
 
         result = evaluate(case, outcomes)

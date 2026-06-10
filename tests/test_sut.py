@@ -62,6 +62,35 @@ def test_get_sut_response_reads_attached():
     assert resp.citations == ["c#1"]
 
 
+def test_build_request_passes_case_config_overrides():
+    from types import SimpleNamespace as NS
+
+    from agon.dataset import METADATA_CASE_KEY
+    from agon.sut.solvers import _build_request
+
+    state = NS(
+        input_text="q",
+        sample_id="t1",
+        metadata={
+            "documents": ["d1"],
+            METADATA_CASE_KEY: {"input": {"config_overrides": {"temperature": 0.7}}},
+        },
+    )
+    req = _build_request(state)
+    assert req.config_overrides == {"temperature": 0.7}
+    assert req.documents == ["d1"]
+    assert req.session_id == "t1_1"
+
+
+def test_build_request_defaults_without_case_metadata():
+    from types import SimpleNamespace as NS
+
+    from agon.sut.solvers import _build_request
+
+    req = _build_request(NS(input_text="q", sample_id="t2", metadata={}))
+    assert req.config_overrides == {}
+
+
 def test_build_solver_requires_callable_for_callable_adapter():
     import pytest
 

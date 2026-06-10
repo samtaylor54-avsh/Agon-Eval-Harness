@@ -41,6 +41,10 @@ from agon.observability.semconv import (
     AGON_SYSTEM_VERSION,
     AGON_TASK,
     GEN_AI_AGENT_NAME,
+    GEN_AI_EVALUATION_EXPLANATION,
+    GEN_AI_EVALUATION_NAME,
+    GEN_AI_EVALUATION_SCORE_LABEL,
+    GEN_AI_EVALUATION_SCORE_VALUE,
     GEN_AI_OPERATION_NAME,
     GEN_AI_PROVIDER_NAME,
     GEN_AI_REQUEST_MODEL,
@@ -111,8 +115,20 @@ def _emit_score(tracer: Any, ctx: Any, e: Any) -> int:
     start = _ns(e.timestamp)
     end = start + _MIN_DUR_NS
     scorer = getattr(e, "scorer", None) or "scorer"
-    value = getattr(getattr(e, "score", None), "value", None)
-    attrs = {AGON_SCORER: scorer, AGON_SCORE_VALUE: _strval(value)}
+    score = getattr(e, "score", None)
+    value = getattr(score, "value", None)
+    attrs = {
+        GEN_AI_EVALUATION_NAME: scorer,
+        AGON_SCORER: scorer,
+        AGON_SCORE_VALUE: _strval(value),
+    }
+    if isinstance(value, bool | int | float):
+        attrs[GEN_AI_EVALUATION_SCORE_VALUE] = float(value)
+        if float(value) in (0.0, 1.0):  # agon's binary pass/fail convention
+            attrs[GEN_AI_EVALUATION_SCORE_LABEL] = "pass" if float(value) == 1.0 else "fail"
+    explanation = getattr(score, "explanation", None)
+    if explanation:
+        attrs[GEN_AI_EVALUATION_EXPLANATION] = redact(str(explanation))
     span = tracer.start_span(
         f"agon.score {scorer}", context=ctx, start_time=start, attributes=attrs
     )

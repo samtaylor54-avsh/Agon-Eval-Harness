@@ -34,6 +34,11 @@ class ScoreOutcome(BaseModel):
 
 @runtime_checkable
 class AgonScorer(Protocol):
+    """Scorer contract. Optionally, a scorer may also define
+    ``validate_spec(spec: ScoringSpec) -> list[str]`` returning human-readable problems with
+    its params; the CLI runs it pre-flight so misconfiguration aborts before any model call.
+    """
+
     scorer_type: str
     requires_judge: bool
 

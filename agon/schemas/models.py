@@ -109,7 +109,8 @@ class AgonCase(BaseModel):
     scoring: list[ScoringSpec] = Field(min_length=1)
     failure_labels: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
-    repetitions: int | None = Field(default=None, ge=1)  # overrides RunConfig.epochs
+    # NOTE: the PRD's per-case `repetitions` override is intentionally absent: repetition is
+    # delegated to Inspect's Epochs, which is task-scoped. Use RunConfig.epochs / --epochs.
     sample_time_limit: int | None = Field(default=None, ge=1)  # per-case wall-clock cap (s)
     metadata: dict[str, Any] = Field(default_factory=dict)
 

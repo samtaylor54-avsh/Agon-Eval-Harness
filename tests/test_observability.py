@@ -57,6 +57,55 @@ def test_export_builds_gen_ai_span_tree():
     assert any(s.name.startswith("agon.score") for s in spans)
 
 
+def test_score_span_carries_gen_ai_evaluation_attributes():
+    from agon.observability.semconv import (
+        GEN_AI_EVALUATION_EXPLANATION,
+        GEN_AI_EVALUATION_NAME,
+        GEN_AI_EVALUATION_SCORE_LABEL,
+        GEN_AI_EVALUATION_SCORE_VALUE,
+    )
+
+    score_event = NS(
+        event="score", timestamp=T0, scorer="agon_scorer",
+        score=NS(value=1.0, explanation="exact_match=1.00"),
+    )
+    sample = NS(id="s1", events=[score_event])
+    log = NS(
+        eval=NS(run_id="r1", task="demo", model=None, created="2026-01-01T00:00:00"),
+        samples=[sample],
+    )
+
+    tracer, exporter = in_memory_tracer()
+    export_eval_log(log, tracer)
+    score = next(s for s in exporter.get_finished_spans() if s.name.startswith("agon.score"))
+    assert score.attributes[GEN_AI_EVALUATION_NAME] == "agon_scorer"
+    assert score.attributes[GEN_AI_EVALUATION_SCORE_VALUE] == 1.0
+    assert score.attributes[GEN_AI_EVALUATION_SCORE_LABEL] == "pass"
+    assert score.attributes[GEN_AI_EVALUATION_EXPLANATION] == "exact_match=1.00"
+
+
+def test_non_numeric_score_value_omits_evaluation_score_value():
+    from agon.observability.semconv import (
+        GEN_AI_EVALUATION_NAME,
+        GEN_AI_EVALUATION_SCORE_VALUE,
+    )
+
+    score_event = NS(
+        event="score", timestamp=T0, scorer="agon_scorer", score=NS(value={"k": 1}),
+    )
+    sample = NS(id="s1", events=[score_event])
+    log = NS(
+        eval=NS(run_id="r1", task="demo", model=None, created="2026-01-01T00:00:00"),
+        samples=[sample],
+    )
+
+    tracer, exporter = in_memory_tracer()
+    export_eval_log(log, tracer)
+    score = next(s for s in exporter.get_finished_spans() if s.name.startswith("agon.score"))
+    assert score.attributes[GEN_AI_EVALUATION_NAME] == "agon_scorer"
+    assert GEN_AI_EVALUATION_SCORE_VALUE not in score.attributes
+
+
 def test_span_tree_is_nested():
     tracer, exporter = in_memory_tracer()
     export_eval_log(_fake_log(), tracer)

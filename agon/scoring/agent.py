@@ -3,7 +3,8 @@
 These read the normalized tool-call trajectory (``SUTResponse.tool_calls``, produced by the
 agent message normalizer), so they work for any agent SUT — native ReAct or bridged LangGraph.
 ``tool_use`` (§25.11) already covers selection / forbidden / args / recovery; these add the
-agentic dimensions it doesn't: planning (gather before acting) and step efficiency.
+agentic dimensions it doesn't: planning (gather before acting), step efficiency, and state
+consistency (session facts survive into the answer).
 """
 
 from __future__ import annotations
@@ -94,6 +95,56 @@ class PlanningScorer:
             normalized_score=1.0 if gathered else 0.0,
             labels=[] if gathered else ["poor_reasoning_path"],
             details={"tool_calls": len(response.tool_calls)},
+        )
+
+
+@register
+class StateConsistencyScorer:
+    """State Management: the answer must reflect session facts and not contradict them.
+
+    ``params.facts`` — strings the answer must still carry (state established earlier in the
+    session or in ``input.documents``); ``params.contradictions`` — strings whose presence
+    means the state was corrupted or invented. Any contradiction gates the score to 0
+    (same gate pattern as ``keyword_containment`` violations).
+    """
+
+    scorer_type = "state_consistency"
+    requires_judge = False
+
+    def validate_spec(self, spec) -> list[str]:
+        if not spec.params.get("facts") and not spec.params.get("contradictions"):
+            return ["state_consistency requires params.facts and/or params.contradictions"]
+        return []
+
+    async def score(self, case, response, spec, *, judge=None) -> ScoreOutcome:
+        facts = [str(f).lower() for f in spec.params.get("facts", [])]
+        contradictions = [str(c).lower() for c in spec.params.get("contradictions", [])]
+        if not facts and not contradictions:
+            raise ValueError(
+                "state_consistency scorer requires params.facts and/or params.contradictions"
+            )
+        answer = (response.final_answer or "").lower()
+        recalled = [f for f in facts if f in answer]
+        contradicted = [c for c in contradictions if c in answer]
+        base = len(recalled) / len(facts) if facts else 1.0
+        labels: list[str] = []
+        if contradicted:
+            normalized = 0.0
+            labels.append("state_contradiction")
+        else:
+            normalized = base
+            if facts and base < 1.0:
+                labels.append("state_loss")
+        return ScoreOutcome(
+            scorer_type=self.scorer_type,
+            native_score=base,
+            normalized_score=normalized,
+            labels=labels,
+            details={
+                "facts": len(facts),
+                "recalled": len(recalled),
+                "contradicted": contradicted,
+            },
         )
 
 

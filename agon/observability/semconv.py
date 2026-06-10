@@ -22,6 +22,13 @@ GEN_AI_TOOL_NAME = "gen_ai.tool.name"
 GEN_AI_TOOL_CALL_ID = "gen_ai.tool.call.id"
 GEN_AI_AGENT_NAME = "gen_ai.agent.name"
 
+# gen_ai.evaluation.* attributes (experimental) — official names for scorer results.
+# Emitted on score spans alongside the agon.* pair, which existing dashboards key on.
+GEN_AI_EVALUATION_NAME = "gen_ai.evaluation.name"
+GEN_AI_EVALUATION_SCORE_VALUE = "gen_ai.evaluation.score.value"
+GEN_AI_EVALUATION_SCORE_LABEL = "gen_ai.evaluation.score.label"
+GEN_AI_EVALUATION_EXPLANATION = "gen_ai.evaluation.explanation"
+
 # Agon-specific attributes (grader/scorer spans + run identity)
 AGON_RUN_ID = "agon.run_id"
 AGON_TASK = "agon.task"

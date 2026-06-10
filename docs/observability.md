@@ -8,8 +8,18 @@ eval <task>                 invoke_workflow   (agon.run_id, agon.task)
   └─ invoke_agent <sample>                    (one per sample)
        ├─ chat <model>      chat              (gen_ai.request.model, gen_ai.usage.*_tokens)
        ├─ execute_tool <t>  execute_tool      (gen_ai.tool.name; ERROR status on tool errors)
-       └─ agon.score <s>                       (agon.scorer, agon.score.value)
+       └─ agon.score <s>                       (gen_ai.evaluation.name / .score.value /
+                                                .score.label / .explanation, plus the
+                                                agon.scorer / agon.score.value pair that
+                                                existing dashboards key on)
 ```
+
+When `agon trace` exports a run it also attaches the eval **outcome** attributes (M10):
+run-level `agon.overall_pass_rate`, `agon.n_cases`, `agon.error_count[.<category>]`,
+`agon.recommendation`, `agon.cost.*`, `agon.system_version`, `agon.dataset_version`; and
+per-sample `agon.passed`, `agon.composite_score`, `agon.category`, `agon.risk_level`,
+`agon.error_category`, `agon.failure_labels`. The full list and the dashboards built on it
+live in `docs/langsmith-dashboards.md`.
 
 Install the extra: `uv sync --extra otel`.
 

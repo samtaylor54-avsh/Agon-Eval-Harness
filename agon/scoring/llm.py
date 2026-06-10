@@ -65,6 +65,16 @@ class RubricScorer:
     scorer_type = "rubric"
     requires_judge = True
 
+    def validate_spec(self, spec) -> list[str]:
+        raw = spec.params.get("rubric")
+        if not raw or not isinstance(raw, dict):
+            return ["rubric requires params.rubric (a {score: description} mapping)"]
+        try:
+            [int(k) for k in raw]
+        except (TypeError, ValueError):
+            return ["rubric params.rubric keys must be integers"]
+        return []
+
     async def score(self, case, response, spec, *, judge=None) -> ScoreOutcome:
         judge = _require_judge(judge, self.scorer_type)
         raw_rubric = spec.params.get("rubric")
